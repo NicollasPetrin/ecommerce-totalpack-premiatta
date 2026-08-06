@@ -1,0 +1,116 @@
+import { useEffect } from 'react'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
+
+import Header from './components/Header'
+import Footer from './components/Footer'
+import CartDrawer from './components/CartDrawer'
+import Toaster from './components/Toaster'
+import { useStore } from './store/StoreContext'
+
+import Home from './pages/Home'
+import Catalog from './pages/Catalog'
+import Product from './pages/Product'
+import Checkout from './pages/Checkout'
+import OrderSuccess from './pages/OrderSuccess'
+import NotFound from './pages/NotFound'
+
+import AdminLayout from './pages/admin/AdminLayout'
+import AdminLogin from './pages/admin/Login'
+import Dashboard from './pages/admin/Dashboard'
+import AdminProducts from './pages/admin/Products'
+import AdminCategories from './pages/admin/Categories'
+import AdminOrders from './pages/admin/Orders'
+import AdminSettings from './pages/admin/Settings'
+
+/** Rola para o topo a cada navegação. */
+function ScrollToTop() {
+  const { pathname, search } = useLocation()
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' })
+  }, [pathname, search])
+  return null
+}
+
+const TITLES = [
+  [/^\/admin\/login$/, 'Entrar no painel'],
+  [/^\/admin\/produtos$/, 'Produtos — Painel'],
+  [/^\/admin\/categorias$/, 'Categorias — Painel'],
+  [/^\/admin\/pedidos$/, 'Pedidos — Painel'],
+  [/^\/admin\/configuracoes$/, 'Configurações — Painel'],
+  [/^\/admin$/, 'Visão geral — Painel'],
+  [/^\/catalogo/, 'Catálogo'],
+  [/^\/produto\//, 'Produto'],
+  [/^\/checkout$/, 'Finalizar pedido'],
+  [/^\/pedido\//, 'Pedido confirmado'],
+]
+
+/** Mantém o título da aba coerente com a rota atual. */
+function PageTitle() {
+  const { pathname } = useLocation()
+  const { settings } = useStore()
+
+  useEffect(() => {
+    const match = TITLES.find(([re]) => re.test(pathname))
+    document.title = match
+      ? `${match[1]} — ${settings.storeName}`
+      : `${settings.storeName} — Material escolar`
+  }, [pathname, settings.storeName])
+
+  return null
+}
+
+/** Casca da loja: cabeçalho, conteúdo, rodapé e sacola. */
+function StoreLayout() {
+  return (
+    <div className="shell">
+      <Header />
+      <main className="shell__main">
+        <Outlet />
+      </main>
+      <Footer />
+      <CartDrawer />
+    </div>
+  )
+}
+
+/** Bloqueia rotas do painel para quem não fez login. */
+function RequireAdmin() {
+  const { isAdmin } = useStore()
+  const location = useLocation()
+  if (!isAdmin) return <Navigate to="/admin/login" replace state={{ from: location.pathname }} />
+  return <Outlet />
+}
+
+export default function App() {
+  return (
+    <>
+      <ScrollToTop />
+      <PageTitle />
+      <Routes>
+        {/* Loja */}
+        <Route element={<StoreLayout />}>
+          <Route index element={<Home />} />
+          <Route path="catalogo" element={<Catalog />} />
+          <Route path="produto/:id" element={<Product />} />
+          <Route path="checkout" element={<Checkout />} />
+          <Route path="pedido/:id" element={<OrderSuccess />} />
+        </Route>
+
+        {/* Painel */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route element={<RequireAdmin />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="produtos" element={<AdminProducts />} />
+            <Route path="categorias" element={<AdminCategories />} />
+            <Route path="pedidos" element={<AdminOrders />} />
+            <Route path="configuracoes" element={<AdminSettings />} />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster />
+    </>
+  )
+}
