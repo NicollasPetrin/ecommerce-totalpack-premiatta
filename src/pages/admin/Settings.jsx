@@ -2,7 +2,6 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../../store/StoreContext'
 import { exportAll } from '../../lib/storage'
-import { maskPhone } from '../../lib/format'
 import { ConfirmDialog } from '../../components/Modal'
 import Icon from '../../components/Icon'
 
@@ -29,7 +28,6 @@ export default function AdminSettings() {
     setSettings((s) => ({
       ...s,
       ...f,
-      whatsapp: String(f.whatsapp).replace(/\D/g, ''),
       lowStockThreshold: Number(f.lowStockThreshold) || 0,
     }))
     toast('Configurações salvas.')
@@ -102,22 +100,23 @@ export default function AdminSettings() {
               </div>
 
               <div className="field">
-                <label htmlFor="s-wa">WhatsApp (com DDI)</label>
-                <input
-                  id="s-wa"
-                  className="input"
-                  value={f.whatsapp}
-                  onChange={set('whatsapp')}
-                  placeholder="5511999999999"
-                />
+                <label htmlFor="s-mail">E-mail</label>
+                <input id="s-mail" className="input" type="email" value={f.email} onChange={set('email')} />
                 <span className="hint">
-                  Usado no botão de pedido: {maskPhone(String(f.whatsapp).slice(2))}
+                  Canal de contato da loja: aparece no rodapé, na ajuda da página
+                  inicial e quando um CEP fica fora de cobertura.
                 </span>
               </div>
 
               <div className="field">
-                <label htmlFor="s-mail">E-mail</label>
-                <input id="s-mail" className="input" type="email" value={f.email} onChange={set('email')} />
+                <label htmlFor="s-phone">Telefone</label>
+                <input
+                  id="s-phone"
+                  className="input"
+                  value={f.phone ?? ''}
+                  onChange={set('phone')}
+                  placeholder="(11) 3333-4444"
+                />
               </div>
 
               <div className="field col-2">

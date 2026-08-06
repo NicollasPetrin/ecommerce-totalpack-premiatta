@@ -21,8 +21,8 @@ export default function Home() {
   const ordered = [...categories].sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
   const countOf = (catId) => live.filter((p) => p.categoryId === catId).length
 
-  const whatsappLink = `https://wa.me/${settings.whatsapp}?text=${encodeURIComponent(
-    'Olá! Gostaria de ajuda com um pedido de material escolar.',
+  const mailLink = `mailto:${settings.email}?subject=${encodeURIComponent(
+    'Ajuda com um pedido de material escolar',
   )}`
 
   return (
@@ -41,9 +41,6 @@ export default function Home() {
             <Link to="/catalogo" className="btn btn--primary btn--xl">
               Ver todos os produtos
             </Link>
-            <a className="btn btn--outline btn--xl" href={whatsappLink} target="_blank" rel="noreferrer">
-              <Icon name="whatsapp" size={20} /> Falar no WhatsApp
-            </a>
           </div>
 
           <p className="open__note">
@@ -127,8 +124,9 @@ export default function Home() {
             <span className="steps__num">3</span>
             <h3>Informe seus dados</h3>
             <p>
-              Preencha nome, telefone e endereço. Nós confirmamos o pagamento e a
-              entrega com você pelo WhatsApp. <strong>Não pedimos dados do cartão.</strong>
+              Preencha nome, telefone e endereço. Nós entramos em contato para
+              confirmar o pagamento e a entrega.{' '}
+              <strong>Não pedimos dados do cartão.</strong>
             </p>
           </li>
         </ol>
@@ -139,12 +137,12 @@ export default function Home() {
         <div className="help">
           <h2>Ficou com dúvida?</h2>
           <p>
-            Se preferir, mande a lista da escola pelo WhatsApp que a gente monta o
+            Se preferir, mande a lista da escola por e-mail que a gente monta o
             pedido e o orçamento para você.
           </p>
 
-          <a className="btn btn--primary btn--xl" href={whatsappLink} target="_blank" rel="noreferrer">
-            <Icon name="whatsapp" size={20} /> Chamar no WhatsApp
+          <a className="btn btn--primary btn--xl" href={mailLink}>
+            <Icon name="mail" size={20} /> Enviar e-mail
           </a>
 
           <div className="help__info">

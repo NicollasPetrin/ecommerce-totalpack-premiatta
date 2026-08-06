@@ -14,12 +14,14 @@ export default function Footer() {
           <strong>{settings.storeName}</strong>
           <p>{settings.tagline}</p>
           <div className="foot__contact">
-            <a href={`https://wa.me/${settings.whatsapp}`} target="_blank" rel="noreferrer">
-              <Icon name="whatsapp" size={17} /> WhatsApp
-            </a>
             <a href={`mailto:${settings.email}`}>
               <Icon name="mail" size={17} /> {settings.email}
             </a>
+            {settings.phone && (
+              <a href={`tel:${settings.phone.replace(/\D/g, '')}`}>
+                <Icon name="phone" size={17} /> {settings.phone}
+              </a>
+            )}
             <span>
               <Icon name="pin" size={17} /> {settings.address}
             </span>

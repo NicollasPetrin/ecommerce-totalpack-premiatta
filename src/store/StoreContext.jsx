@@ -23,11 +23,16 @@ export const ORDER_STATUS = {
   cancelado: { label: 'Cancelado', tone: 'red' },
 }
 
+/**
+ * Formas de pagamento aceitas.
+ *
+ * Pagamento na entrega (maquininha e dinheiro) foi retirado até haver uma
+ * processadora. As duas opções restantes são pagas antes do envio, fora do
+ * site: nenhum dado de cartão passa por aqui.
+ */
 export const PAYMENT_LABEL = {
   pix: 'PIX',
-  cartao: 'Cartão na entrega',
   boleto: 'Boleto',
-  dinheiro: 'Dinheiro',
 }
 
 /* -------------------------------------------------------------------------- */

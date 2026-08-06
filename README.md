@@ -76,9 +76,22 @@ isso. As telas não mudam.
 ## Como a loja funciona
 
 O cliente monta a sacola, preenche o checkout (entrega ou retirada) e confirma.
-O pedido é gravado, o estoque é baixado automaticamente e a tela final oferece
-um botão que abre o WhatsApp com o pedido já formatado — é assim que o pedido
-chega até você. Não há cobrança online nem coleta de dados de cartão.
+O pedido é gravado e o estoque é baixado automaticamente. As formas de
+pagamento são PIX e boleto, ambos combinados fora do site — não há cobrança
+online nem coleta de dados de cartão.
+
+> ### ⚠️ Os pedidos ainda não chegam até você
+>
+> O pedido é gravado no `localStorage` do **navegador do cliente**. O painel lê
+> o `localStorage` do **seu** navegador — são dispositivos diferentes, e nada
+> viaja de um para o outro. Hoje o site funciona como catálogo e simulador de
+> pedido, não como canal de venda.
+>
+> Para receber os pedidos de fato é preciso um canal de saída: um serviço de
+> formulário por e-mail (Formspree, Web3Forms) resolve sem backend próprio;
+> uma API própria resolve de vez e é o mesmo passo necessário para a
+> processadora de pagamento. O ponto de mudança é `placeOrder`, em
+> `src/store/StoreContext.jsx`.
 
 ## Estrutura
 

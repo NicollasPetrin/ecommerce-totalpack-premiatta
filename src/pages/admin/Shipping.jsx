@@ -202,7 +202,7 @@ export default function AdminShipping() {
                     <Icon name="alert" size={17} />
                     <span>
                       Nenhuma região cobre este CEP. O cliente verá um aviso e será
-                      direcionado ao WhatsApp.
+                      direcionado ao e-mail da loja.
                     </span>
                   </p>
                 ))}

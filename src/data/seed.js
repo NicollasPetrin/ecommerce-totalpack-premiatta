@@ -650,7 +650,7 @@ export const PRODUCTS = [
 export const SETTINGS = {
   storeName: 'TotalPack',
   tagline: 'Material escolar completo, do A4 ao colorset.',
-  whatsapp: '5511999999999',
+  phone: '(11) 3333-4444',
   email: 'contato@totalpack.com.br',
   address: 'Rua das Papelarias, 120 — São Paulo, SP',
   hours: 'Seg a sex, 8h às 18h · Sáb, 9h às 13h',
@@ -767,7 +767,7 @@ export function makeDemoOrders() {
       delivery: i % 4 === 0 ? 'retirada' : 'entrega',
       deliveryZone: i % 4 === 0 ? '' : zone.name,
       deliveryDays: i % 4 === 0 ? 0 : zone.days,
-      payment: ['pix', 'pix', 'cartao', 'boleto'][i % 4],
+      payment: ['pix', 'pix', 'boleto', 'pix'][i % 4],
       note: i % 5 === 0 ? 'Colorset nas cores azul, verde e amarelo.' : '',
       items,
       subtotal,

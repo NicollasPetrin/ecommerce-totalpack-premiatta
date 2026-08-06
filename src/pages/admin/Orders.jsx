@@ -168,13 +168,18 @@ export default function AdminOrders() {
           title={`Pedido ${orderCode(current.seq, current.createdAt)}`}
           footer={
             <>
-              <a
-                className="btn btn--secondary"
-                href={`https://wa.me/${current.customer.phone.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Icon name="whatsapp" size={16} /> Falar com o cliente
+              {current.customer.email && (
+                <a
+                  className="btn btn--secondary"
+                  href={`mailto:${current.customer.email}?subject=${encodeURIComponent(
+                    `Pedido ${orderCode(current.seq, current.createdAt)}`,
+                  )}`}
+                >
+                  <Icon name="mail" size={16} /> Enviar e-mail
+                </a>
+              )}
+              <a className="btn btn--secondary" href={`tel:${current.customer.phone.replace(/\D/g, '')}`}>
+                <Icon name="phone" size={16} /> Ligar
               </a>
               <button className="btn btn--primary" onClick={() => setOpen(null)}>
                 Fechar
@@ -281,7 +286,7 @@ export default function AdminOrders() {
                     <dd>{current.customer.name}</dd>
                   </div>
                   <div>
-                    <dt>WhatsApp</dt>
+                    <dt>Telefone</dt>
                     <dd>{current.customer.phone}</dd>
                   </div>
                   {current.customer.email && (

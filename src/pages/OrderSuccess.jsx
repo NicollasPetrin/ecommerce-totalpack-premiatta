@@ -23,31 +23,6 @@ export default function OrderSuccess() {
 
   const code = orderCode(order.seq, order.createdAt)
 
-  const message = [
-    `Olá! Acabei de fazer o pedido ${code} no site da ${settings.storeName}.`,
-    '',
-    ...order.items.map((i) => `• ${i.qty}× ${i.name} — ${money(i.price * i.qty)}`),
-    '',
-    `Subtotal: ${money(order.subtotal)}`,
-    `${order.delivery === 'retirada' ? 'Retirada na loja' : 'Entrega'}: ${
-      order.shipping === 0 ? 'grátis' : money(order.shipping)
-    }`,
-    `Total: ${money(order.total)}`,
-    `Pagamento: ${PAYMENT_LABEL[order.payment]}`,
-    order.note ? `Observação: ${order.note}` : '',
-    '',
-    `Nome: ${order.customer.name}`,
-    order.delivery === 'entrega'
-      ? `Endereço: ${order.customer.address}, ${order.customer.number}${
-          order.customer.complement ? ` — ${order.customer.complement}` : ''
-        }, ${order.customer.district}, ${order.customer.city}/${order.customer.state} — CEP ${order.customer.cep}`
-      : '',
-  ]
-    .filter(Boolean)
-    .join('\n')
-
-  const waLink = `https://wa.me/${settings.whatsapp}?text=${encodeURIComponent(message)}`
-
   const copyPix = async () => {
     try {
       await navigator.clipboard.writeText(settings.pixKey)
@@ -65,15 +40,12 @@ export default function OrderSuccess() {
         </span>
         <h1>Pedido confirmado</h1>
         <p>
-          Recebemos o pedido <strong>{code}</strong>. Vamos confirmar o pagamento e a
-          entrega pelo WhatsApp.
+          Recebemos o pedido <strong>{code}</strong>. Vamos entrar em contato pelo
+          telefone ou e-mail informados para confirmar o pagamento e a entrega.
         </p>
 
         <div className="success__cta">
-          <a className="btn btn--primary btn--lg" href={waLink} target="_blank" rel="noreferrer">
-            <Icon name="whatsapp" size={18} /> Enviar pedido no WhatsApp
-          </a>
-          <Link className="btn btn--outline btn--lg" to="/catalogo">
+          <Link className="btn btn--primary btn--lg" to="/catalogo">
             Continuar comprando
           </Link>
         </div>
@@ -130,7 +102,7 @@ export default function OrderSuccess() {
               <dd>{order.customer.name}</dd>
             </div>
             <div>
-              <dt>WhatsApp</dt>
+              <dt>Telefone</dt>
               <dd>{order.customer.phone}</dd>
             </div>
             <div>

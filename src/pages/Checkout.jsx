@@ -143,7 +143,7 @@ export default function Checkout() {
               </div>
 
               <div className={`field${errors.phone ? ' has-error' : ''}`}>
-                <label htmlFor="ck-phone">WhatsApp *</label>
+                <label htmlFor="ck-phone">Telefone *</label>
                 <input
                   id="ck-phone"
                   className="input"
@@ -342,11 +342,7 @@ export default function Checkout() {
                     <span>
                       {value === 'pix'
                         ? 'Chave enviada após o pedido'
-                        : value === 'boleto'
-                          ? 'Vencimento em 3 dias'
-                          : value === 'cartao'
-                            ? 'Maquininha na entrega'
-                            : 'Combine o troco'}
+                        : 'Enviamos o boleto após a confirmação'}
                     </span>
                   </span>
                 </label>
