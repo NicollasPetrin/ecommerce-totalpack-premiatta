@@ -51,7 +51,8 @@ export default function Checkout() {
       ...(defaultAddress
         ? {
             addressId: defaultAddress.id,
-            cep: defaultAddress.cep,
+            // O banco guarda só os 8 dígitos; a tela mostra com máscara.
+            cep: maskCep(defaultAddress.cep),
             address: defaultAddress.address,
             number: defaultAddress.number,
             complement: defaultAddress.complement,
@@ -83,7 +84,7 @@ export default function Checkout() {
     setForm((f) => ({
       ...f,
       addressId: a.id,
-      cep: a.cep,
+      cep: maskCep(a.cep),
       address: a.address,
       number: a.number,
       complement: a.complement,
@@ -160,16 +161,20 @@ export default function Checkout() {
     return true
   }
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     if (sending) return
     if (!validate()) return
 
     setSending(true)
     try {
-      const order = placeOrder(form)
+      const order = await placeOrder(form)
       navigate(`/pedido/${order.id}`, { replace: true })
     } catch (err) {
+      // O servidor pode recusar por estoque, CEP ou campo inválido.
+      if (err.details && Object.keys(err.details).length) {
+        setErrors(err.details)
+      }
       toast(err.message ?? 'Não foi possível finalizar o pedido.', 'err')
       setSending(false)
     }

@@ -1,19 +1,47 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useStore, PAYMENT_LABEL } from '../store/StoreContext'
-import { dateTime, money, orderCode } from '../lib/format'
+import { api } from '../lib/api'
+import { dateTime, maskCep, money, orderCode } from '../lib/format'
 import ProductArt from '../components/ProductArt'
 import Icon from '../components/Icon'
 
 export default function OrderSuccess() {
   const { id } = useParams()
-  const { orders, settings, toast } = useStore()
-  const order = orders.find((o) => o.id === id)
+  const { settings, toast } = useStore()
+
+  // O pedido é buscado por id: o cliente não carrega a lista de pedidos da
+  // loja, e o servidor só devolve este se ele tiver direito de vê-lo.
+  const [order, setOrder] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .get(`/orders/${id}`)
+      .then(({ order: found }) => !cancelled && setOrder(found))
+      .catch(() => !cancelled && setOrder(null))
+      .finally(() => !cancelled && setLoading(false))
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="wrap empty" style={{ minHeight: '60vh' }}>
+        <span className="boot__spinner" aria-hidden="true" />
+        <p>Carregando o pedido…</p>
+      </div>
+    )
+  }
 
   if (!order) {
     return (
       <div className="wrap empty" style={{ minHeight: '60vh' }}>
         <Icon name="receipt" size={48} strokeWidth={1.2} />
         <h3>Pedido não encontrado</h3>
+        <p>O endereço pode estar errado, ou este pedido pertence a outra conta.</p>
         <Link to="/catalogo" className="btn btn--primary">
           Voltar à loja
         </Link>
@@ -116,7 +144,9 @@ export default function OrderSuccess() {
                   ? settings.address
                   : `${order.customer.address}, ${order.customer.number}${
                       order.customer.complement ? ` — ${order.customer.complement}` : ''
-                    } · ${order.customer.district} · ${order.customer.city}/${order.customer.state}`}
+                    } · ${order.customer.district} · ${order.customer.city}/${
+                      order.customer.state
+                    } · CEP ${maskCep(order.customer.cep)}`}
               </dd>
             </div>
             {order.note && (

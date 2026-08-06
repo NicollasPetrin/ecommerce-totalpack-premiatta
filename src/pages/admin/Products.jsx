@@ -172,7 +172,9 @@ export default function AdminProducts() {
                         <input
                           type="checkbox"
                           checked={p.active}
-                          onChange={() => toggleProduct(p.id)}
+                          onChange={() =>
+                            toggleProduct(p.id).catch((err) => toast(err.message, 'err'))
+                          }
                         />
                         <span className="switch__track" />
                       </label>
@@ -214,10 +216,14 @@ export default function AdminProducts() {
           value={editing}
           categories={categories}
           onClose={() => setEditing(null)}
-          onSave={(data) => {
-            saveProduct(data)
-            setEditing(null)
-            toast(data.id ? 'Produto atualizado.' : 'Produto cadastrado.')
+          onSave={async (data) => {
+            try {
+              await saveProduct(data)
+              setEditing(null)
+              toast(data.id ? 'Produto atualizado.' : 'Produto cadastrado.')
+            } catch (err) {
+              toast(err.message, 'err')
+            }
           }}
         />
       )}
@@ -225,9 +231,13 @@ export default function AdminProducts() {
       <ConfirmDialog
         open={Boolean(removing)}
         onClose={() => setRemoving(null)}
-        onConfirm={() => {
-          deleteProduct(removing.id)
-          toast('Produto excluído.')
+        onConfirm={async () => {
+          try {
+            await deleteProduct(removing.id)
+            toast('Produto excluído.')
+          } catch (err) {
+            toast(err.message, 'err')
+          }
         }}
         title="Excluir produto"
         message={`“${removing?.name}” será removido do catálogo. Pedidos já feitos não são afetados. Esta ação não pode ser desfeita.`}

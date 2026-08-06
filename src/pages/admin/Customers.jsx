@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStore, ORDER_STATUS } from '../../store/StoreContext'
-import { date, money, norm, orderCode } from '../../lib/format'
+import { date, maskCep, money, norm, orderCode } from '../../lib/format'
 import Modal from '../../components/Modal'
 import Icon from '../../components/Icon'
 
@@ -178,7 +178,7 @@ export default function AdminCustomers() {
                         <br />
                         {a.district} · {a.city}/{a.state}
                         <br />
-                        CEP {a.cep}
+                        CEP {maskCep(a.cep)}
                       </p>
                     </article>
                   ))}

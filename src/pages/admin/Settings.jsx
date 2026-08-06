@@ -1,21 +1,19 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../../store/StoreContext'
-import { exportAll } from '../../lib/storage'
-import { ConfirmDialog } from '../../components/Modal'
 import Icon from '../../components/Icon'
 
 export default function AdminSettings() {
-  const { settings, setSettings, resetCatalog, importBackup, changePassword, toast } = useStore()
+  const { settings, saveSettings, changePassword, toast } = useStore()
 
   const [f, setF] = useState({
     ...settings,
+    freeShippingFrom: String(settings.freeShippingFrom),
     lowStockThreshold: String(settings.lowStockThreshold),
   })
+  const [saving, setSaving] = useState(false)
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
   const [pwError, setPwError] = useState('')
-  const [resetting, setResetting] = useState(false)
-  const fileRef = useRef(null)
 
   const set = (key) => (e) =>
     setF((old) => ({
@@ -23,52 +21,31 @@ export default function AdminSettings() {
       [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
     }))
 
-  const saveStore = (e) => {
+  const saveStore = async (e) => {
     e.preventDefault()
-    setSettings((s) => ({
-      ...s,
-      ...f,
-      lowStockThreshold: Number(f.lowStockThreshold) || 0,
-    }))
-    toast('Configurações salvas.')
+    setSaving(true)
+    try {
+      await saveSettings({
+        ...f,
+        freeShippingFrom: Number(String(f.freeShippingFrom).replace(',', '.')) || 0,
+        lowStockThreshold: Number(f.lowStockThreshold) || 0,
+      })
+      toast('Configurações salvas.')
+    } catch (err) {
+      toast(err.message, 'err')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const savePassword = (e) => {
+  const savePassword = async (e) => {
     e.preventDefault()
     setPwError('')
-    if (pw.next.length < 6) return setPwError('A nova senha precisa ter ao menos 6 caracteres.')
+    if (pw.next.length < 8) return setPwError('A nova senha precisa ter ao menos 8 caracteres.')
     if (pw.next !== pw.confirm) return setPwError('A confirmação não confere.')
-    if (!changePassword(pw.current, pw.next)) return setPwError('Senha atual incorreta.')
+    if (!(await changePassword(pw.current, pw.next))) return setPwError('Senha atual incorreta.')
     setPw({ current: '', next: '', confirm: '' })
     toast('Senha alterada.')
-  }
-
-  const download = () => {
-    const data = exportAll()
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `totalpack-backup-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast('Backup exportado.')
-  }
-
-  const upload = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        importBackup(JSON.parse(String(reader.result)))
-        toast('Backup restaurado.')
-      } catch (err) {
-        toast(err.message ?? 'Arquivo inválido.', 'err')
-      }
-    }
-    reader.readAsText(file)
-    e.target.value = ''
   }
 
   return (
@@ -76,7 +53,7 @@ export default function AdminSettings() {
       <header className="apage__head">
         <div>
           <h1>Configurações</h1>
-          <p>Dados da loja, regras de entrega, acesso e backup.</p>
+          <p>Dados da loja, acesso e informações do sistema.</p>
         </div>
       </header>
 
@@ -103,20 +80,14 @@ export default function AdminSettings() {
                 <label htmlFor="s-mail">E-mail</label>
                 <input id="s-mail" className="input" type="email" value={f.email} onChange={set('email')} />
                 <span className="hint">
-                  Canal de contato da loja: aparece no rodapé, na ajuda da página
-                  inicial e quando um CEP fica fora de cobertura.
+                  Canal de contato: aparece no rodapé, na ajuda da página inicial e quando um
+                  CEP fica fora de cobertura.
                 </span>
               </div>
 
               <div className="field">
                 <label htmlFor="s-phone">Telefone</label>
-                <input
-                  id="s-phone"
-                  className="input"
-                  value={f.phone ?? ''}
-                  onChange={set('phone')}
-                  placeholder="(11) 3333-4444"
-                />
+                <input id="s-phone" className="input" value={f.phone} onChange={set('phone')} />
               </div>
 
               <div className="field col-2">
@@ -166,8 +137,8 @@ export default function AdminSettings() {
             </div>
 
             <div className="row gap-3">
-              <button className="btn btn--primary" type="submit">
-                Salvar alterações
+              <button className="btn btn--primary" type="submit" disabled={saving}>
+                {saving ? 'Salvando…' : 'Salvar alterações'}
               </button>
             </div>
           </div>
@@ -223,56 +194,35 @@ export default function AdminSettings() {
               </button>
 
               <p className="hint">
-                A senha é guardada apenas neste navegador, de forma ofuscada. Para uma loja
-                em produção, mova a autenticação para um servidor.
+                A senha é guardada no banco com bcrypt e conferida no servidor. Nem o
+                navegador nem o banco veem a senha em texto.
               </p>
             </div>
           </form>
 
-          {/* ----------------------------------------------------- Backup */}
+          {/* -------------------------------------------------- Backup */}
           <section className="acard">
             <header className="acard__head">
-              <h2>Backup e dados</h2>
+              <h2>Backup dos dados</h2>
             </header>
 
             <div className="stack gap-3">
-              <button className="btn btn--outline btn--block" onClick={download}>
-                <Icon name="download" size={16} /> Exportar backup (.json)
-              </button>
+              <p className="acard__note">
+                Os dados agora vivem no PostgreSQL, então o backup é do banco, não de um
+                arquivo baixado pelo navegador. O comando abaixo gera uma cópia completa:
+              </p>
 
-              <button
-                className="btn btn--outline btn--block"
-                onClick={() => fileRef.current?.click()}
-              >
-                <Icon name="upload" size={16} /> Restaurar backup
-              </button>
-              <input ref={fileRef} type="file" accept="application/json" hidden onChange={upload} />
+              <pre className="codeblock">pg_dump -U totalpack -d totalpack -F c -f backup.dump</pre>
 
-              <hr className="rule" />
-
-              <button className="btn btn--danger btn--block" onClick={() => setResetting(true)}>
-                <Icon name="refresh" size={16} /> Restaurar catálogo de exemplo
-              </button>
-              <p className="hint">
-                Substitui produtos, categorias e pedidos pelos dados originais de
-                demonstração. A senha é preservada.
+              <p className="acard__note">
+                Para restaurar: <code>pg_restore -U totalpack -d totalpack backup.dump</code>.
+                Vale agendar isso para rodar sozinho antes de a loja receber pedidos de
+                verdade.
               </p>
             </div>
           </section>
         </div>
       </div>
-
-      <ConfirmDialog
-        open={resetting}
-        onClose={() => setResetting(false)}
-        onConfirm={() => {
-          resetCatalog()
-          toast('Catálogo restaurado.')
-        }}
-        title="Restaurar catálogo de exemplo"
-        message="Todos os produtos, categorias e pedidos atuais serão substituídos pelos dados de demonstração. Exporte um backup antes se quiser preservar o que existe hoje."
-        confirmLabel="Restaurar"
-      />
     </>
   )
 }

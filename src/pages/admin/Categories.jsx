@@ -14,12 +14,17 @@ export default function AdminCategories() {
   const ordered = [...categories].sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
   const countOf = (id) => products.filter((p) => p.categoryId === id).length
 
-  const move = (cat, dir) => {
+  const move = async (cat, dir) => {
     const idx = ordered.findIndex((c) => c.id === cat.id)
     const swap = ordered[idx + dir]
     if (!swap) return
-    saveCategory({ ...cat, order: swap.order ?? idx + 1 + dir })
-    saveCategory({ ...swap, order: cat.order ?? idx + 1 })
+    try {
+      // Em sequência, não em paralelo: são duas escritas na mesma tabela.
+      await saveCategory({ ...cat, order: swap.order ?? idx + 1 + dir })
+      await saveCategory({ ...swap, order: cat.order ?? idx + 1 })
+    } catch (err) {
+      toast(err.message, 'err')
+    }
   }
 
   return (
@@ -112,10 +117,14 @@ export default function AdminCategories() {
         <CategoryForm
           value={editing}
           onClose={() => setEditing(null)}
-          onSave={(data) => {
-            saveCategory(data)
-            setEditing(null)
-            toast(data.id ? 'Categoria atualizada.' : 'Categoria criada.')
+          onSave={async (data) => {
+            try {
+              await saveCategory(data)
+              setEditing(null)
+              toast(data.id ? 'Categoria atualizada.' : 'Categoria criada.')
+            } catch (err) {
+              toast(err.message, 'err')
+            }
           }}
         />
       )}
@@ -123,9 +132,13 @@ export default function AdminCategories() {
       <ConfirmDialog
         open={Boolean(removing)}
         onClose={() => setRemoving(null)}
-        onConfirm={() => {
-          deleteCategory(removing.id)
-          toast('Categoria excluída.')
+        onConfirm={async () => {
+          try {
+            await deleteCategory(removing.id)
+            toast('Categoria excluída.')
+          } catch (err) {
+            toast(err.message, 'err')
+          }
         }}
         title="Excluir categoria"
         message={

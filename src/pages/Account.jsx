@@ -51,8 +51,8 @@ export default function Account() {
         </div>
         <button
           className="btn btn--outline"
-          onClick={() => {
-            logoutCustomer()
+          onClick={async () => {
+            await logoutCustomer()
             toast('Você saiu da conta.')
             navigate('/')
           }}
@@ -161,16 +161,20 @@ export default function Account() {
                     <br />
                     {a.district} · {a.city}/{a.state}
                     <br />
-                    CEP {a.cep}
+                    CEP {maskCep(a.cep)}
                   </p>
 
                   <footer>
                     {!a.isDefault && (
                       <button
                         className="btn btn--ghost btn--sm"
-                        onClick={() => {
-                          setDefaultAddress(a.id)
-                          toast('Endereço padrão atualizado.')
+                        onClick={async () => {
+                          try {
+                            await setDefaultAddress(a.id)
+                            toast('Endereço padrão atualizado.')
+                          } catch (err) {
+                            toast(err.message, 'err')
+                          }
                         }}
                       >
                         Tornar padrão
@@ -204,10 +208,14 @@ export default function Account() {
         <AddressForm
           value={editingAddress}
           onClose={() => setEditingAddress(null)}
-          onSave={(data) => {
-            saveAddress(data)
-            setEditingAddress(null)
-            toast(data.id ? 'Endereço atualizado.' : 'Endereço salvo.')
+          onSave={async (data) => {
+            try {
+              await saveAddress(data)
+              setEditingAddress(null)
+              toast(data.id ? 'Endereço atualizado.' : 'Endereço salvo.')
+            } catch (err) {
+              toast(err.message, 'err')
+            }
           }}
         />
       )}
@@ -215,9 +223,13 @@ export default function Account() {
       <ConfirmDialog
         open={Boolean(removingAddress)}
         onClose={() => setRemovingAddress(null)}
-        onConfirm={() => {
-          deleteAddress(removingAddress.id)
-          toast('Endereço excluído.')
+        onConfirm={async () => {
+          try {
+            await deleteAddress(removingAddress.id)
+            toast('Endereço excluído.')
+          } catch (err) {
+            toast(err.message, 'err')
+          }
         }}
         title="Excluir endereço"
         message={`“${removingAddress?.label || 'Endereço'}” será removido da sua conta.`}
@@ -244,18 +256,28 @@ function ProfileForm() {
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
   const [pwError, setPwError] = useState('')
 
-  const saveProfile = (e) => {
+  const saveProfile = async (e) => {
     e.preventDefault()
-    updateCustomer({ name: f.name.trim(), email: f.email.trim().toLowerCase(), phone: f.phone })
-    toast('Dados atualizados.')
+    try {
+      await updateCustomer({
+        name: f.name.trim(),
+        email: f.email.trim().toLowerCase(),
+        phone: f.phone,
+      })
+      toast('Dados atualizados.')
+    } catch (err) {
+      toast(err.message, 'err')
+    }
   }
 
-  const savePassword = (e) => {
+  const savePassword = async (e) => {
     e.preventDefault()
     setPwError('')
-    if (pw.next.length < 6) return setPwError('A nova senha precisa ter ao menos 6 caracteres.')
+    if (pw.next.length < 8) return setPwError('A nova senha precisa ter ao menos 8 caracteres.')
     if (pw.next !== pw.confirm) return setPwError('A confirmação não confere.')
-    if (!changeCustomerPassword(pw.current, pw.next)) return setPwError('Senha atual incorreta.')
+    if (!(await changeCustomerPassword(pw.current, pw.next))) {
+      return setPwError('Senha atual incorreta.')
+    }
     setPw({ current: '', next: '', confirm: '' })
     toast('Senha alterada.')
   }
@@ -362,7 +384,7 @@ function ProfileForm() {
 /* -------------------------------------------------------------------------- */
 
 function AddressForm({ value, onClose, onSave }) {
-  const [f, setF] = useState({ ...value })
+  const [f, setF] = useState({ ...value, cep: maskCep(value.cep ?? '') })
   const [errors, setErrors] = useState({})
 
   const set = (key, v) => {
@@ -520,8 +542,10 @@ function AddressForm({ value, onClose, onSave }) {
 /* -------------------------------------------------------------------------- */
 
 function OrderDetail({ orderId, onClose }) {
-  const { orders, settings, addToCart, productById, toast } = useStore()
-  const order = orders.find((o) => o.id === orderId)
+  // Vem de `customerOrders`, a lista da própria conta — `orders` só existe
+  // para o administrador.
+  const { customerOrders, settings, addToCart, productById, toast } = useStore()
+  const order = customerOrders.find((o) => o.id === orderId)
   if (!order) return null
 
   /** Recompra: devolve à sacola o que ainda existe e tem estoque. */

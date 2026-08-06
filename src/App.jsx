@@ -89,9 +89,44 @@ function RequireAdmin() {
   return <Outlet />
 }
 
+/**
+ * Enquanto o catálogo e a sessão não chegam do servidor, nada pode renderizar:
+ * as telas leem `settings`, que só existe depois da primeira resposta.
+ */
+function Boot({ children }) {
+  const { ready, bootError } = useStore()
+
+  if (bootError) {
+    return (
+      <div className="boot boot--error">
+        <h1>Não foi possível carregar a loja</h1>
+        <p>{bootError}</p>
+        <p className="boot__hint">
+          Verifique se a API está no ar em <code>http://localhost:3333</code> e se o
+          PostgreSQL está rodando. Depois, recarregue a página.
+        </p>
+        <button className="btn btn--primary" onClick={() => window.location.reload()}>
+          Tentar de novo
+        </button>
+      </div>
+    )
+  }
+
+  if (!ready) {
+    return (
+      <div className="boot">
+        <span className="boot__spinner" aria-hidden="true" />
+        <p>Carregando a loja…</p>
+      </div>
+    )
+  }
+
+  return children
+}
+
 export default function App() {
   return (
-    <>
+    <Boot>
       <ScrollToTop />
       <PageTitle />
       <Routes>
@@ -123,6 +158,6 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster />
-    </>
+    </Boot>
   )
 }

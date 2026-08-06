@@ -23,9 +23,8 @@ const blank = () => ({
 })
 
 export default function AdminShipping() {
-  const { settings, setSettings, saveZone, deleteZone, toggleZone, toast } = useStore()
+  const { settings, saveSettings, zones, saveZone, deleteZone, toggleZone, toast } = useStore()
 
-  const zones = settings.shippingZones ?? []
   const [editing, setEditing] = useState(null)
   const [removing, setRemoving] = useState(null)
   const [testCep, setTestCep] = useState('')
@@ -35,14 +34,18 @@ export default function AdminShipping() {
     pickupEnabled: settings.pickupEnabled,
   })
 
-  const saveRules = (e) => {
+  const saveRules = async (e) => {
     e.preventDefault()
-    setSettings((s) => ({
-      ...s,
-      freeShippingFrom: Number(String(rules.freeShippingFrom).replace(',', '.')) || 0,
-      pickupEnabled: rules.pickupEnabled,
-    }))
-    toast('Regras de entrega salvas.')
+    try {
+      await saveSettings({
+        ...settings,
+        freeShippingFrom: Number(String(rules.freeShippingFrom).replace(',', '.')) || 0,
+        pickupEnabled: rules.pickupEnabled,
+      })
+      toast('Regras de entrega salvas.')
+    } catch (err) {
+      toast(err.message, 'err')
+    }
   }
 
   const testZone = normalizeCep(testCep) ? findZone(testCep, zones) : null
@@ -93,7 +96,9 @@ export default function AdminShipping() {
                         <input
                           type="checkbox"
                           checked={z.active !== false}
-                          onChange={() => toggleZone(z.id)}
+                          onChange={() =>
+                            toggleZone(z.id).catch((err) => toast(err.message, 'err'))
+                          }
                         />
                         <span className="switch__track" />
                       </label>
@@ -232,10 +237,14 @@ export default function AdminShipping() {
           value={editing}
           zones={zones}
           onClose={() => setEditing(null)}
-          onSave={(data) => {
-            saveZone(data)
-            setEditing(null)
-            toast(data.id ? 'Região atualizada.' : 'Região cadastrada.')
+          onSave={async (data) => {
+            try {
+              await saveZone(data)
+              setEditing(null)
+              toast(data.id ? 'Região atualizada.' : 'Região cadastrada.')
+            } catch (err) {
+              toast(err.message, 'err')
+            }
           }}
         />
       )}
@@ -243,9 +252,13 @@ export default function AdminShipping() {
       <ConfirmDialog
         open={Boolean(removing)}
         onClose={() => setRemoving(null)}
-        onConfirm={() => {
-          deleteZone(removing.id)
-          toast('Região excluída.')
+        onConfirm={async () => {
+          try {
+            await deleteZone(removing.id)
+            toast('Região excluída.')
+          } catch (err) {
+            toast(err.message, 'err')
+          }
         }}
         title="Excluir região"
         message={`“${removing?.name}” será removida. Clientes desse intervalo de CEP deixarão de conseguir escolher entrega.`}

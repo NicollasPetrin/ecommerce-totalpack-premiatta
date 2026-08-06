@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStore, ORDER_STATUS, PAYMENT_LABEL } from '../../store/StoreContext'
-import { dateTime, money, norm, orderCode } from '../../lib/format'
+import { dateTime, maskCep, money, norm, orderCode } from '../../lib/format'
 import Modal, { ConfirmDialog } from '../../components/Modal'
 import ProductArt from '../../components/ProductArt'
 import Icon from '../../components/Icon'
@@ -202,9 +202,13 @@ export default function AdminOrders() {
                       className={`ostep${done ? ' is-done' : ''}${
                         current.status === s ? ' is-now' : ''
                       }`}
-                      onClick={() => {
-                        updateOrderStatus(current.id, s)
-                        toast(`Pedido marcado como ${ORDER_STATUS[s].label.toLowerCase()}.`)
+                      onClick={async () => {
+                        try {
+                          await updateOrderStatus(current.id, s)
+                          toast(`Pedido marcado como ${ORDER_STATUS[s].label.toLowerCase()}.`)
+                        } catch (err) {
+                          toast(err.message, 'err')
+                        }
                       }}
                       disabled={current.status === 'cancelado'}
                     >
@@ -227,9 +231,13 @@ export default function AdminOrders() {
               ) : (
                 <button
                   className="btn btn--danger btn--sm"
-                  onClick={() => {
-                    updateOrderStatus(current.id, 'cancelado')
-                    toast('Pedido cancelado.')
+                  onClick={async () => {
+                    try {
+                      await updateOrderStatus(current.id, 'cancelado')
+                      toast('Pedido cancelado.')
+                    } catch (err) {
+                      toast(err.message, 'err')
+                    }
                   }}
                 >
                   Cancelar pedido
@@ -323,7 +331,7 @@ export default function AdminOrders() {
                         {current.customer.district} · {current.customer.city}/
                         {current.customer.state}
                         <br />
-                        CEP {current.customer.cep}
+                        CEP {maskCep(current.customer.cep)}
                       </dd>
                     </div>
                   )}
@@ -352,9 +360,13 @@ export default function AdminOrders() {
       <ConfirmDialog
         open={Boolean(removing)}
         onClose={() => setRemoving(null)}
-        onConfirm={() => {
-          deleteOrder(removing.id)
-          toast('Pedido excluído.')
+        onConfirm={async () => {
+          try {
+            await deleteOrder(removing.id)
+            toast('Pedido excluído.')
+          } catch (err) {
+            toast(err.message, 'err')
+          }
         }}
         title="Excluir pedido"
         message={`O pedido ${

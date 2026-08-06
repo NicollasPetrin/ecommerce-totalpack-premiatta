@@ -4,10 +4,12 @@ import { useStore } from '../../store/StoreContext'
 import Icon from '../../components/Icon'
 
 export default function AdminLogin() {
-  const { login, isAdmin, settings } = useStore()
+  const { login, isAdmin } = useStore()
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [show, setShow] = useState(false)
+  const [sending, setSending] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -15,12 +17,18 @@ export default function AdminLogin() {
 
   if (isAdmin) return <Navigate to={from} replace />
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
-    if (login(password)) {
+    if (sending) return
+
+    setSending(true)
+    const result = await login(email, password)
+    setSending(false)
+
+    if (result.ok) {
       navigate(from, { replace: true })
     } else {
-      setError('Senha incorreta. Tente novamente.')
+      setError(result.error)
       setPassword('')
     }
   }
@@ -34,6 +42,22 @@ export default function AdminLogin() {
 
         <h1>Painel administrativo</h1>
         <p>Entre para gerenciar produtos, pedidos e configurações da loja.</p>
+
+        <div className="field">
+          <label htmlFor="adm-email">E-mail</label>
+          <input
+            id="adm-email"
+            className="input"
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setError('')
+            }}
+            autoComplete="username"
+            placeholder="admin@totalpack.com.br"
+          />
+        </div>
 
         <div className={`field${error ? ' has-error' : ''}`}>
           <label htmlFor="pw">Senha</label>
@@ -62,16 +86,14 @@ export default function AdminLogin() {
           {error && <span className="err">{error}</span>}
         </div>
 
-        <button className="btn btn--primary btn--lg btn--block" type="submit">
-          Entrar
+        <button className="btn btn--primary btn--lg btn--block" type="submit" disabled={sending}>
+          {sending ? 'Entrando…' : 'Entrar'}
         </button>
 
-        {!settings.adminPassHash && (
-          <p className="login__hint">
-            Primeiro acesso? A senha padrão é <code>admin123</code>. Troque-a em
-            Configurações depois de entrar.
-          </p>
-        )}
+        <p className="login__hint">
+          As credenciais iniciais são criadas pelo <code>npm run db:seed</code> e ficam no
+          arquivo <code>.env</code>. Troque a senha em Configurações após o primeiro acesso.
+        </p>
 
         <Link to="/" className="login__back">
           <Icon name="chevronLeft" size={15} /> Voltar para a loja

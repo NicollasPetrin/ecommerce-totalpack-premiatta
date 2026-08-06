@@ -244,6 +244,25 @@
   line-height: 1.6;
 }
 
+.acard__note code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--bg-sunken);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.codeblock {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  background: var(--bg-sunken);
+  color: var(--label);
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  overflow-x: auto;
+  white-space: pre;
+}
+
 .ziptest {
   display: flex;
   align-items: flex-start;

@@ -1,162 +1,161 @@
 # TotalPack
 
 Loja de material escolar (papel A4, colorset, cadernos, arte) com painel
-administrativo completo. React + Vite, sem backend: todo o estado vive no
-`localStorage` do navegador.
+administrativo. React + Vite no front, API Express e PostgreSQL no back.
 
 ## Rodar
+
+Precisa de **Node 18+** e **PostgreSQL 14+**.
 
 ```bash
 npm install
 ```
 
+Crie o banco e o usuário:
+
+```bash
+psql -U postgres -c "CREATE ROLE totalpack LOGIN PASSWORD 'troque_esta_senha'; CREATE DATABASE totalpack OWNER totalpack;"
+```
+
+Copie `.env.example` para `.env` e ajuste `DATABASE_URL` e `JWT_SECRET`. Depois:
+
+```bash
+npm run db:setup
+```
+
+Isso aplica o esquema e carrega o catálogo inicial. Por fim:
+
 ```bash
 npm run dev
 ```
 
-Abre em `http://localhost:5173`.
+Sobe a API na porta 3333 e o front na 5173, juntos. Abra
+`http://localhost:5173`.
 
-Para gerar a versão de produção:
+### Outros comandos
 
-```bash
-npm run build
+| Comando | O que faz |
+| --- | --- |
+| `npm run dev:api` | Só a API, com recarga automática |
+| `npm run dev:web` | Só o front |
+| `npm run db:migrate` | Aplica o esquema (idempotente) |
+| `npm run db:seed` | Carrega o catálogo inicial |
+| `npm run db:reset` | **Apaga tudo** e recria o esquema vazio |
+| `npm run build` | Gera o front em `dist/` |
+| `npm start` | Roda a API em produção |
+
+## Acesso
+
+As credenciais iniciais saem do `npm run db:seed` e são definidas no `.env`:
+
+- **Painel** (`/admin`): `admin@totalpack.com.br` / `admin12345`
+- **Cliente de teste** (`/entrar`): `ana.moura@email.com` / `cliente12345`
+
+**Troque as duas antes de qualquer uso real.**
+
+## Arquitetura
+
+```
+server/
+  index.js              Express: middlewares, rotas, encerramento limpo
+  config.js             variáveis de ambiente, com validação
+  db/schema.sql         esquema completo (tabelas, índices, constraints)
+  db/pool.js            pool de conexões, helpers e transações
+  db/migrate.js         aplica o esquema
+  db/seed.js            carrega o catálogo inicial
+  db/reset.js           zera o banco (só desenvolvimento)
+  lib/auth.js           bcrypt, JWT em cookie httpOnly, guards de rota
+  lib/shipping.js       frete por faixa de CEP (autoridade do servidor)
+  lib/validate.js       schemas Zod de toda entrada
+  lib/serialize.js      tradução snake_case (banco) → camelCase (front)
+  lib/http.js           erros com status e middleware de erro
+  routes/auth.js        contas de clientes, sessão, endereços
+  routes/catalog.js     categorias e produtos
+  routes/orders.js      criação de pedido, histórico, gestão
+  routes/store.js       configurações, frete, acesso e clientes (admin)
+
+src/
+  lib/api.js            cliente HTTP
+  store/StoreContext.jsx estado global; carga inicial e mutações via API
+  pages/                Home, Catalog, Product, Checkout, OrderSuccess,
+                        Auth (entrar/criar conta), Account (minha conta)
+  pages/admin/          Dashboard, Products, Categories, Orders, Customers,
+                        Shipping, Settings
+  styles/               tokens.css (design), app.css (loja), admin.css (painel)
 ```
 
-Os arquivos saem em `dist/` e podem ser publicados em qualquer hospedagem
-estática (Vercel, Netlify, GitHub Pages, hospedagem comum).
+O front chama sempre `/api/...` na própria origem: no desenvolvimento o Vite
+encaminha para o Express (ver `vite.config.js`), e em produção os dois são
+servidos juntos.
 
-> **Atenção ao publicar:** o app usa rotas de navegador (`/catalogo`,
-> `/admin`). O servidor precisa devolver `index.html` para qualquer caminho,
-> senão um F5 em `/admin` dá 404. Na Vercel e Netlify isso é automático; no
-> Apache, use um `.htaccess` com `FallbackResource /index.html`.
+## O que o servidor garante
 
-## Painel administrativo
+Estas regras existem no servidor justamente porque **nada que vem do navegador
+é confiável**:
 
-Acesse `/admin`. **Senha padrão: `admin123`** — troque em
-*Configurações › Senha de acesso* no primeiro acesso.
-
-O painel tem:
-
-- **Visão geral** — faturamento, ticket médio, valor em estoque, gráfico dos
-  últimos 14 dias, mais vendidos, pedidos recentes e alerta de estoque baixo.
-- **Pedidos** — busca, filtro por status, detalhe completo do pedido e
-  mudança de status (pendente → pago → enviado → entregue, ou cancelado).
-- **Produtos** — cadastro completo com preço promocional, estoque, unidade de
-  venda, especificações, foto própria ou ilustração vetorial (24 desenhos ×
-  12 cores), destaque na home e visibilidade na loja.
-- **Categorias** — CRUD e reordenação do menu.
-- **Clientes** — contas cadastradas, com endereços, pedidos, total gasto e
-  quantos pedidos vieram sem cadastro.
-- **Entrega** — regiões por faixa de CEP, com preço e prazo próprios, regra de
-  frete grátis, retirada na loja e um simulador para testar qualquer CEP.
-- **Configurações** — dados da loja, WhatsApp, chave PIX, limite de estoque
-  baixo, troca de senha e backup em JSON.
+- **Preço e frete são recalculados** a cada pedido, a partir do banco. O que o
+  navegador manda é descartado — um pedido forjado com preço de R$ 0,01 é
+  gravado pelo valor real.
+- **Estoque com trava de linha** (`SELECT ... FOR UPDATE` dentro de transação):
+  dois pedidos simultâneos do mesmo produto não conseguem furar o estoque.
+- **Senhas com bcrypt** (12 rounds). Nem o banco nem os logs veem a senha.
+- **Sessão em cookie `httpOnly`**: o JavaScript da página não alcança o token,
+  então um XSS não consegue roubá-lo.
+- **Cliente só enxerga o que é seu**: pedidos e endereços são filtrados por
+  `customer_id` na consulta, não na tela.
+- **Rotas de escrita exigem sessão de administrador** — sem sessão dá 401, com
+  sessão de cliente dá 403.
+- **Toda entrada passa por Zod** antes de chegar ao banco.
+- **Dinheiro em `NUMERIC(10,2)`**, não em ponto flutuante.
 
 ## Contas de clientes
 
-O cliente pode criar conta em `/entrar` e acessar `/conta` para ver os pedidos
-anteriores (com "comprar de novo"), manter uma lista de endereços com um
-padrão, e editar dados e senha. No checkout, quem está logado já encontra o
-formulário preenchido, escolhe entre os endereços salvos e pode guardar um
-endereço novo. **Comprar sem cadastro continua funcionando** — o pedido fica
-apenas sem vínculo com conta.
-
-> ### ⚠️ Não é um sistema de contas de verdade
->
-> As contas ficam no `localStorage` — ou seja, **no aparelho onde foram
-> criadas**. A conta feita no celular não existe no computador, e limpar os
-> dados do navegador apaga tudo. A senha é conferida no próprio navegador, com
-> um hash fraco (`hash` em `storage.js`): qualquer pessoa com o DevTools aberto
-> passa por ela.
->
-> Some a isso que endereço, telefone e e-mail são dados pessoais — guardá-los
-> assim não atende à LGPD. Antes de abrir a loja ao público, contas e
-> autenticação precisam ir para um servidor.
+O cliente cria conta em `/entrar` e acessa `/conta` para ver pedidos anteriores
+(com "comprar de novo"), manter endereços com um padrão, e editar dados e
+senha. No checkout, quem está logado encontra o formulário preenchido e escolhe
+entre os endereços salvos. **Comprar sem cadastro continua funcionando** — o
+pedido fica sem vínculo com conta.
 
 ## Frete
 
-O cálculo é uma **tabela por faixa de CEP**, não uma consulta às
-transportadoras: o cliente digita o CEP, o sistema procura a primeira região
-ativa que contenha aquele número e mostra preço e prazo. Sem servidor, sem
-token, sem chamada externa — funciona em hospedagem estática.
+Tabela por faixa de CEP, gerida em *Painel › Entrega*: o cliente digita o CEP e
+recebe preço e prazo da região correspondente. A loja consulta a tabela no
+navegador só para exibir o valor enquanto ele digita; **o valor cobrado é o que
+o servidor calcula** ao criar o pedido.
 
-As regiões que vêm cadastradas cobrem o Brasil inteiro e são um ponto de
-partida para uma loja em São Paulo. **Revise os valores antes de vender:**
-papel é pesado (uma resma A4 tem cerca de 2,5 kg) e um pedido com dez resmas
-custa muito mais para enviar do que a tabela sugere. O painel impede o cadastro
-de duas regiões com faixas sobrepostas, porque a busca sempre pegaria a
-primeira.
+As 9 regiões iniciais cobrem o Brasil e são ponto de partida. **Revise antes de
+vender:** papel é pesado (uma resma A4 tem ~2,5 kg) e um pedido com dez resmas
+custa bem mais para enviar do que a tabela sugere. O cadastro recusa faixas
+sobrepostas, que tornariam o preço ambíguo.
 
-Se um CEP não cair em nenhuma região, o cliente vê um aviso e é direcionado ao
-WhatsApp ou à retirada — o pedido não é aceito às cegas.
-
-Para trocar por cotação real (Correios, Jadlog, Melhor Envio), o ponto de
-mudança é `src/lib/shipping.js`: ele passa a chamar uma função no servidor. Vai
-ser preciso hospedar em algo que rode backend (Vercel, por exemplo) e
-acrescentar peso e dimensões ao cadastro de produto — nenhuma API cota sem
-isso. As telas não mudam.
-
-## Como a loja funciona
-
-O cliente monta a sacola, preenche o checkout (entrega ou retirada) e confirma.
-O pedido é gravado e o estoque é baixado automaticamente. As formas de
-pagamento são PIX e boleto, ambos combinados fora do site — não há cobrança
-online nem coleta de dados de cartão.
-
-> ### ⚠️ Os pedidos ainda não chegam até você
->
-> O pedido é gravado no `localStorage` do **navegador do cliente**. O painel lê
-> o `localStorage` do **seu** navegador — são dispositivos diferentes, e nada
-> viaja de um para o outro. Hoje o site funciona como catálogo e simulador de
-> pedido, não como canal de venda.
->
-> Para receber os pedidos de fato é preciso um canal de saída: um serviço de
-> formulário por e-mail (Formspree, Web3Forms) resolve sem backend próprio;
-> uma API própria resolve de vez e é o mesmo passo necessário para a
-> processadora de pagamento. O ponto de mudança é `placeOrder`, em
-> `src/store/StoreContext.jsx`.
-
-## Estrutura
-
-```
-src/
-  data/seed.js            catálogo inicial (34 produtos, 7 categorias, 12 pedidos demo)
-  lib/format.js           moeda, datas, máscaras, slug
-  lib/shipping.js         frete por faixa de CEP
-  lib/storage.js          leitura/gravação, backup, hash da senha
-  store/StoreContext.jsx  estado global: produtos, pedidos, carrinho, sessão
-  components/             Header, Footer, CartDrawer, ProductCard, Modal, Icon…
-  components/ProductArt   ilustrações vetoriais dos produtos
-  pages/                  Home, Catalog, Product, Checkout, OrderSuccess,
-                          Auth (entrar/criar conta), Account (minha conta)
-  pages/admin/            AdminLayout, Login, Dashboard, Products, Categories,
-                          Orders, Customers, Shipping, Settings
-  styles/tokens.css       design tokens + reset + componentes base
-  styles/app.css          loja
-  styles/admin.css        painel
-```
-
-## Design
-
-Segue as diretrizes da Apple: tipografia grande e hierárquica (fonte do
-sistema), muito espaço em branco, barras translúcidas com `backdrop-filter`,
-paleta neutra com um único azul de acento, cantos generosos, sombras suaves e
-movimento discreto. Modo claro e escuro (automático pelo sistema ou manual pelo
-ícone no cabeçalho) e layout responsivo até 375 px.
-
-## Trocar o `localStorage` por um backend
-
-Toda a persistência está isolada em `src/lib/storage.js` e no
-`StoreContext`. Para plugar uma API, substitua as chamadas `read`/`write` por
-`fetch` — nenhuma tela precisa mudar.
-
-Antes de ir para produção com dinheiro real, mova a autenticação do admin para
-o servidor: hoje a senha é verificada no navegador (hash FNV em
-`storage.js`), o que serve para uso interno mas não protege contra alguém que
-abra o DevTools.
+Para trocar por cotação real (Correios, Melhor Envio), o ponto de mudança é
+`server/lib/shipping.js` — e será preciso acrescentar peso e dimensões ao
+cadastro de produto, que nenhuma transportadora dispensa.
 
 ## Backup
 
-*Configurações › Backup e dados* exporta um `.json` com produtos, categorias,
-pedidos e configurações, e restaura o mesmo arquivo. Como os dados ficam no
-navegador, limpar os dados do site apaga tudo — exporte de tempos em tempos.
+Os dados estão no PostgreSQL:
+
+```bash
+pg_dump -U totalpack -d totalpack -F c -f backup.dump
+```
+
+Restaurar: `pg_restore -U totalpack -d totalpack backup.dump`. Vale agendar
+isso antes de a loja receber pedidos de verdade.
+
+## Antes de abrir ao público
+
+O que ainda falta, em ordem de urgência:
+
+1. **Os pedidos não avisam ninguém.** Eles são gravados no banco e aparecem no
+   painel, mas ninguém é notificado. Falta disparar e-mail (ou outro aviso) na
+   criação do pedido — o gancho é o final de `POST /api/orders`.
+2. **Pagamento.** PIX e boleto são combinados fora do site. Integrar uma
+   processadora é o próximo passo natural agora que existe servidor.
+3. **HTTPS e segredos.** Em produção, `NODE_ENV=production` liga o cookie
+   `secure`; o `JWT_SECRET` precisa ser longo e ficar fora do repositório.
+4. **Limite de tentativas de login.** Não há proteção contra força bruta nas
+   rotas de autenticação.
+5. **LGPD.** O banco guarda nome, telefone, e-mail e endereço de clientes.
+   Falta política de privacidade, consentimento e um caminho para exclusão de
+   conta a pedido do titular.

@@ -5,11 +5,13 @@
       "name": "totalpack",
       "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
       "runtimeArgs": [
-        "node_modules/vite/bin/vite.js",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "5173"
+        "node_modules/concurrently/dist/bin/concurrently.js",
+        "-n",
+        "api,web",
+        "-c",
+        "cyan,magenta",
+        "node server/index.js",
+        "node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173"
       ],
       "port": 5173
     }

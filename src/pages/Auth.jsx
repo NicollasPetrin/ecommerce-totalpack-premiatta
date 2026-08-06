@@ -6,7 +6,7 @@ import Icon from '../components/Icon'
 
 /** Entrar e criar conta na mesma tela, alternando entre os dois modos. */
 export default function Auth() {
-  const { currentCustomer, loginCustomer, signup, toast, customers } = useStore()
+  const { currentCustomer, loginCustomer, signup, toast } = useStore()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -14,6 +14,7 @@ export default function Auth() {
   const [f, setF] = useState({ name: '', email: '', phone: '', password: '', confirm: '' })
   const [errors, setErrors] = useState({})
   const [show, setShow] = useState(false)
+  const [sending, setSending] = useState(false)
 
   const from = location.state?.from ?? '/conta'
 
@@ -30,12 +31,15 @@ export default function Auth() {
     setErrors({})
   }
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
+    if (sending) return
+
     const err = {}
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) err.email = 'E-mail inválido.'
-    if (f.password.length < 6) err.password = 'A senha precisa ter ao menos 6 caracteres.'
+    // Mesmo mínimo exigido pelo servidor.
+    if (f.password.length < 8) err.password = 'A senha precisa ter ao menos 8 caracteres.'
 
     if (mode === 'criar') {
       if (f.name.trim().length < 3) err.name = 'Informe seu nome completo.'
@@ -46,22 +50,26 @@ export default function Auth() {
     setErrors(err)
     if (Object.keys(err).length) return
 
+    setSending(true)
     const result =
       mode === 'entrar'
-        ? loginCustomer(f.email, f.password)
-        : signup({ name: f.name, email: f.email, phone: f.phone, password: f.password })
+        ? await loginCustomer(f.email, f.password)
+        : await signup({ name: f.name, email: f.email, phone: f.phone, password: f.password })
+    setSending(false)
 
     if (!result.ok) {
-      setErrors({ geral: result.error })
+      // O servidor pode devolver erro por campo além da mensagem geral.
+      setErrors({ ...(result.details ?? {}), geral: result.error })
       return
     }
 
-    toast(mode === 'entrar' ? `Bem-vindo de volta, ${result.account.name.split(' ')[0]}!` : 'Conta criada.')
+    toast(
+      mode === 'entrar'
+        ? `Bem-vindo de volta, ${result.account.name.split(' ')[0]}!`
+        : 'Conta criada.',
+    )
     navigate(from, { replace: true })
   }
-
-  // Só mostra a dica da conta de teste enquanto ela existir intocada.
-  const demo = customers.find((c) => c.id === 'cus_demo' && c.passHash === null)
 
   return (
     <div className="wrap auth">
@@ -190,16 +198,14 @@ export default function Auth() {
             </p>
           )}
 
-          <button className="btn btn--primary btn--lg btn--block" type="submit">
-            {mode === 'entrar' ? 'Entrar' : 'Criar minha conta'}
+          <button
+            className="btn btn--primary btn--lg btn--block"
+            type="submit"
+            disabled={sending}
+          >
+            {sending ? 'Aguarde…' : mode === 'entrar' ? 'Entrar' : 'Criar minha conta'}
           </button>
         </form>
-
-        {mode === 'entrar' && demo && (
-          <p className="auth__demo">
-            Conta de teste: <code>{demo.email}</code> · senha <code>cliente123</code>
-          </p>
-        )}
 
         <p className="auth__guest">
           Você também pode <Link to="/catalogo">comprar sem criar conta</Link>.

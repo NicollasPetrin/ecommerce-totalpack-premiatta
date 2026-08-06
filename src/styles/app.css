@@ -1960,6 +1960,55 @@
 }
 
 /* ==========================================================================
+   Carregamento inicial
+   ========================================================================== */
+
+.boot {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: var(--gutter);
+  text-align: center;
+  color: var(--label-2);
+}
+
+.boot__spinner {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid var(--separator);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.boot--error h1 {
+  font-size: var(--fs-title-2);
+  color: var(--label);
+  margin-bottom: 6px;
+}
+
+.boot--error p { max-width: 46ch; line-height: 1.6; }
+
+.boot__hint {
+  font-size: var(--fs-footnote);
+  color: var(--label-3);
+}
+
+.boot__hint code {
+  font-family: var(--font-mono);
+  background: var(--bg-sunken);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
    404
    ========================================================================== */
 

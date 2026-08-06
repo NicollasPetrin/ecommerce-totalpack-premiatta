@@ -86,8 +86,8 @@ export default function AdminLayout() {
           </button>
           <button
             className="anav anav--danger"
-            onClick={() => {
-              logout()
+            onClick={async () => {
+              await logout()
               navigate('/admin/login', { replace: true })
             }}
           >
