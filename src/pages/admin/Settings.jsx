@@ -129,7 +129,7 @@ export default function AdminSettings() {
               </div>
 
               <div className="field">
-                <span className="label">Frete e retirada</span>
+                <span className="label">Frete</span>
                 <Link to="/admin/entrega" className="btn btn--outline">
                   <Icon name="truck" size={16} /> Configurar entrega
                 </Link>

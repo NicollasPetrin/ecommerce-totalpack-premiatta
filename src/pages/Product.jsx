@@ -136,12 +136,10 @@ export default function Product() {
               <Icon name="truck" size={18} />
               Frete grátis acima de {money(settings.freeShippingFrom)}
             </li>
-            {settings.pickupEnabled && (
-              <li>
-                <Icon name="store" size={18} />
-                Retirada na loja sem custo
-              </li>
-            )}
+            <li>
+              <Icon name="box" size={18} />
+              Entrega para todo o Brasil
+            </li>
             <li>
               <Icon name="shield" size={18} />
               PIX, cartão ou boleto

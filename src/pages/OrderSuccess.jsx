@@ -168,6 +168,27 @@ export default function OrderSuccess() {
               </button>
             </div>
           )}
+
+          {order.payment === 'cartao' && (
+            <div className="paynote">
+              <Icon name="shield" size={18} />
+              <p>
+                Vamos enviar um <strong>link de pagamento seguro</strong> para o e-mail
+                ou telefone informados. Os dados do cartão são digitados na página da
+                operadora — nunca aqui.
+              </p>
+            </div>
+          )}
+
+          {order.payment === 'boleto' && (
+            <div className="paynote">
+              <Icon name="receipt" size={18} />
+              <p>
+                O boleto será enviado para o e-mail ou telefone informados. O pedido é
+                separado assim que o pagamento for compensado.
+              </p>
+            </div>
+          )}
         </section>
       </div>
     </div>

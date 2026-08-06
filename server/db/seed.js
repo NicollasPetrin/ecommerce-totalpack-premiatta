@@ -30,15 +30,15 @@ const run = async () => {
     /* ---- Configurações ---- */
     await client.query(
       `INSERT INTO settings (id, store_name, tagline, email, phone, address, hours,
-                             instagram, pix_key, free_shipping_from, pickup_enabled,
+                             instagram, pix_key, free_shipping_from,
                              low_stock_threshold)
-       VALUES (true,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       VALUES (true,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        ON CONFLICT (id) DO UPDATE SET
          store_name = EXCLUDED.store_name, tagline = EXCLUDED.tagline`,
       [
         SETTINGS.storeName, SETTINGS.tagline, SETTINGS.email, SETTINGS.phone,
         SETTINGS.address, SETTINGS.hours, SETTINGS.instagram, SETTINGS.pixKey,
-        SETTINGS.freeShippingFrom, SETTINGS.pickupEnabled, SETTINGS.lowStockThreshold,
+        SETTINGS.freeShippingFrom, SETTINGS.lowStockThreshold,
       ],
     )
 

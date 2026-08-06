@@ -57,7 +57,6 @@ export default function Footer() {
             </li>
             <li>Frete grátis acima de {money(settings.freeShippingFrom)}</li>
             <li>Pagamento por PIX, cartão ou boleto</li>
-            {settings.pickupEnabled && <li>Retirada na loja sem custo</li>}
           </ul>
         </div>
 

@@ -23,8 +23,17 @@ export const ORDER_STATUS = {
   cancelado: { label: 'Cancelado', tone: 'red' },
 }
 
+/**
+ * Formas de pagamento.
+ *
+ * Nenhuma delas coleta dado de cartão no site. No cartão, o cliente recebe um
+ * link de pagamento da processadora e paga por lá — o número do cartão nunca
+ * passa por este servidor, que é o único jeito seguro de fazer isso sem
+ * certificação PCI.
+ */
 export const PAYMENT_LABEL = {
   pix: 'PIX',
+  cartao: 'Cartão de crédito',
   boleto: 'Boleto',
 }
 

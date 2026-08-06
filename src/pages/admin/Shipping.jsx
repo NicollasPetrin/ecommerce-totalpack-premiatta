@@ -31,7 +31,6 @@ export default function AdminShipping() {
 
   const [rules, setRules] = useState({
     freeShippingFrom: String(settings.freeShippingFrom),
-    pickupEnabled: settings.pickupEnabled,
   })
 
   const saveRules = async (e) => {
@@ -40,7 +39,6 @@ export default function AdminShipping() {
       await saveSettings({
         ...settings,
         freeShippingFrom: Number(String(rules.freeShippingFrom).replace(',', '.')) || 0,
-        pickupEnabled: rules.pickupEnabled,
       })
       toast('Regras de entrega salvas.')
     } catch (err) {
@@ -130,8 +128,8 @@ export default function AdminShipping() {
               <Icon name="truck" size={40} strokeWidth={1.2} />
               <h3>Nenhuma região cadastrada</h3>
               <p>
-                Sem regiões, a loja só aceita retirada. Cadastre ao menos a área que você
-                atende.
+                Sem nenhuma região cadastrada, a loja não consegue aceitar pedidos.
+                Cadastre ao menos a área que você atende.
               </p>
             </div>
           )}
@@ -158,16 +156,6 @@ export default function AdminShipping() {
                   Vale para todas as regiões. Deixe 0 para nunca dar frete grátis.
                 </span>
               </div>
-
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={rules.pickupEnabled}
-                  onChange={(e) => setRules({ ...rules, pickupEnabled: e.target.checked })}
-                />
-                <span className="switch__track" />
-                Permitir retirada na loja
-              </label>
 
               <button className="btn btn--primary" type="submit">
                 Salvar regras

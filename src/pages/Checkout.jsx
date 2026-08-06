@@ -116,8 +116,7 @@ export default function Checkout() {
   const [errors, setErrors] = useState({})
   const [sending, setSending] = useState(false)
 
-  const isPickup = form.delivery === 'retirada'
-  const ship = isPickup ? 0 : (shipping ?? 0)
+  const ship = shipping ?? 0
   const grand = subtotal + ship
 
   const set = (key) => (e) => {
@@ -140,15 +139,13 @@ export default function Checkout() {
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       e.email = 'E-mail inválido.'
 
-    if (!isPickup) {
-      if (form.cep.replace(/\D/g, '').length !== 8) e.cep = 'CEP incompleto.'
-      else if (outOfRange) e.cep = 'Ainda não entregamos neste CEP.'
-      if (!form.address.trim()) e.address = 'Informe a rua.'
-      if (!form.number.trim()) e.number = 'Informe o número.'
-      if (!form.district.trim()) e.district = 'Informe o bairro.'
-      if (!form.city.trim()) e.city = 'Informe a cidade.'
-      if (form.state.length !== 2) e.state = 'UF.'
-    }
+    if (form.cep.replace(/\D/g, '').length !== 8) e.cep = 'CEP incompleto.'
+    else if (outOfRange) e.cep = 'Ainda não entregamos neste CEP.'
+    if (!form.address.trim()) e.address = 'Informe a rua.'
+    if (!form.number.trim()) e.number = 'Informe o número.'
+    if (!form.district.trim()) e.district = 'Informe o bairro.'
+    if (!form.city.trim()) e.city = 'Informe a cidade.'
+    if (form.state.length !== 2) e.state = 'UF.'
 
     setErrors(e)
     if (Object.keys(e).length) {
@@ -277,47 +274,15 @@ export default function Checkout() {
               <Icon name="truck" size={18} /> Entrega
             </h2>
 
-            <div className="options">
-              <label className={`option${form.delivery === 'entrega' ? ' is-on' : ''}`}>
-                <input
-                  type="radio"
-                  name="delivery"
-                  value="entrega"
-                  checked={form.delivery === 'entrega'}
-                  onChange={set('delivery')}
-                />
-                <span className="option__mark" />
-                <span className="option__body">
-                  <strong>Entrega no endereço</strong>
-                  <span>
-                    {freeShipping
-                      ? 'Frete grátis neste pedido'
-                      : zone
-                        ? `${money(zone.fee)} · chega em ${zoneDeadline(zone)}`
-                        : 'Informe o CEP abaixo para ver o valor'}
-                  </span>
-                </span>
-              </label>
+            <p className="panel__lead">
+              {freeShipping
+                ? 'Frete grátis neste pedido.'
+                : zone
+                  ? `${money(zone.fee)} · chega em ${zoneDeadline(zone)}.`
+                  : 'Informe o CEP abaixo para ver o valor do frete.'}
+            </p>
 
-              {settings.pickupEnabled && (
-                <label className={`option${isPickup ? ' is-on' : ''}`}>
-                  <input
-                    type="radio"
-                    name="delivery"
-                    value="retirada"
-                    checked={isPickup}
-                    onChange={set('delivery')}
-                  />
-                  <span className="option__mark" />
-                  <span className="option__body">
-                    <strong>Retirar na loja</strong>
-                    <span>Sem custo · {settings.address}</span>
-                  </span>
-                </label>
-              )}
-            </div>
-
-            {!isPickup && savedAddresses.length > 0 && (
+            {savedAddresses.length > 0 && (
               <div className="savedaddr">
                 <span className="label">Endereços salvos na sua conta</span>
                 <div className="savedaddr__list">
@@ -356,130 +321,128 @@ export default function Checkout() {
               </div>
             )}
 
-            {!isPickup && (
-              <div className="form-grid" style={{ marginTop: 18 }}>
-                <div className={`field${errors.cep ? ' has-error' : ''}`}>
-                  <label htmlFor="ck-cep">CEP *</label>
-                  <input
-                    id="ck-cep"
-                    className="input"
-                    value={form.cep}
-                    onChange={set('cep')}
-                    inputMode="numeric"
-                    autoComplete="postal-code"
-                    placeholder="01310-100"
-                  />
-                  {errors.cep ? (
-                    <span className="err">{errors.cep}</span>
-                  ) : zone ? (
-                    <span className="hint hint--ok">
-                      {zone.name} · chega em {zoneDeadline(zone)}
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className={`field${errors.address ? ' has-error' : ''}`}>
-                  <label htmlFor="ck-address">Rua *</label>
-                  <input
-                    id="ck-address"
-                    className="input"
-                    value={form.address}
-                    onChange={set('address')}
-                    autoComplete="address-line1"
-                    placeholder="Av. Paulista"
-                  />
-                  {errors.address && <span className="err">{errors.address}</span>}
-                </div>
-
-                <div className={`field${errors.number ? ' has-error' : ''}`}>
-                  <label htmlFor="ck-number">Número *</label>
-                  <input
-                    id="ck-number"
-                    className="input"
-                    value={form.number}
-                    onChange={set('number')}
-                    placeholder="1000"
-                  />
-                  {errors.number && <span className="err">{errors.number}</span>}
-                </div>
-
-                <div className="field">
-                  <label htmlFor="ck-comp">Complemento</label>
-                  <input
-                    id="ck-comp"
-                    className="input"
-                    value={form.complement}
-                    onChange={set('complement')}
-                    placeholder="Apto 42"
-                  />
-                </div>
-
-                <div className={`field${errors.district ? ' has-error' : ''}`}>
-                  <label htmlFor="ck-district">Bairro *</label>
-                  <input
-                    id="ck-district"
-                    className="input"
-                    value={form.district}
-                    onChange={set('district')}
-                    placeholder="Bela Vista"
-                  />
-                  {errors.district && <span className="err">{errors.district}</span>}
-                </div>
-
-                <div className={`field${errors.city ? ' has-error' : ''}`}>
-                  <label htmlFor="ck-city">Cidade *</label>
-                  <input
-                    id="ck-city"
-                    className="input"
-                    value={form.city}
-                    onChange={set('city')}
-                    autoComplete="address-level2"
-                    placeholder="São Paulo"
-                  />
-                  {errors.city && <span className="err">{errors.city}</span>}
-                </div>
-
-                <div className={`field field--uf${errors.state ? ' has-error' : ''}`}>
-                  <label htmlFor="ck-state">UF *</label>
-                  <input
-                    id="ck-state"
-                    className="input"
-                    value={form.state}
-                    onChange={set('state')}
-                    maxLength={2}
-                    placeholder="SP"
-                  />
-                  {errors.state && <span className="err">{errors.state}</span>}
-                </div>
-
-                {currentCustomer && !form.addressId && (
-                  <div className="field col-2 savecheck">
-                    <label className="switch">
-                      <input
-                        type="checkbox"
-                        checked={form.saveAddress}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, saveAddress: e.target.checked }))
-                        }
-                      />
-                      <span className="switch__track" />
-                      Salvar este endereço na minha conta
-                    </label>
-
-                    {form.saveAddress && (
-                      <input
-                        className="input"
-                        value={form.addressLabel}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, addressLabel: e.target.value }))
-                        }
-                        placeholder="Dê um nome: Casa, Trabalho, Escola…"
-                      />
-                    )}
-                  </div>
-                )}
+            <div className="form-grid" style={{ marginTop: 18 }}>
+              <div className={`field${errors.cep ? ' has-error' : ''}`}>
+                <label htmlFor="ck-cep">CEP *</label>
+                <input
+                  id="ck-cep"
+                  className="input"
+                  value={form.cep}
+                  onChange={set('cep')}
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  placeholder="01310-100"
+                />
+                {errors.cep ? (
+                  <span className="err">{errors.cep}</span>
+                ) : zone ? (
+                  <span className="hint hint--ok">
+                    {zone.name} · chega em {zoneDeadline(zone)}
+                  </span>
+                ) : null}
               </div>
-            )}
+
+              <div className={`field${errors.address ? ' has-error' : ''}`}>
+                <label htmlFor="ck-address">Rua *</label>
+                <input
+                  id="ck-address"
+                  className="input"
+                  value={form.address}
+                  onChange={set('address')}
+                  autoComplete="address-line1"
+                  placeholder="Av. Paulista"
+                />
+                {errors.address && <span className="err">{errors.address}</span>}
+              </div>
+
+              <div className={`field${errors.number ? ' has-error' : ''}`}>
+                <label htmlFor="ck-number">Número *</label>
+                <input
+                  id="ck-number"
+                  className="input"
+                  value={form.number}
+                  onChange={set('number')}
+                  placeholder="1000"
+                />
+                {errors.number && <span className="err">{errors.number}</span>}
+              </div>
+
+              <div className="field">
+                <label htmlFor="ck-comp">Complemento</label>
+                <input
+                  id="ck-comp"
+                  className="input"
+                  value={form.complement}
+                  onChange={set('complement')}
+                  placeholder="Apto 42"
+                />
+              </div>
+
+              <div className={`field${errors.district ? ' has-error' : ''}`}>
+                <label htmlFor="ck-district">Bairro *</label>
+                <input
+                  id="ck-district"
+                  className="input"
+                  value={form.district}
+                  onChange={set('district')}
+                  placeholder="Bela Vista"
+                />
+                {errors.district && <span className="err">{errors.district}</span>}
+              </div>
+
+              <div className={`field${errors.city ? ' has-error' : ''}`}>
+                <label htmlFor="ck-city">Cidade *</label>
+                <input
+                  id="ck-city"
+                  className="input"
+                  value={form.city}
+                  onChange={set('city')}
+                  autoComplete="address-level2"
+                  placeholder="São Paulo"
+                />
+                {errors.city && <span className="err">{errors.city}</span>}
+              </div>
+
+              <div className={`field field--uf${errors.state ? ' has-error' : ''}`}>
+                <label htmlFor="ck-state">UF *</label>
+                <input
+                  id="ck-state"
+                  className="input"
+                  value={form.state}
+                  onChange={set('state')}
+                  maxLength={2}
+                  placeholder="SP"
+                />
+                {errors.state && <span className="err">{errors.state}</span>}
+              </div>
+
+              {currentCustomer && !form.addressId && (
+                <div className="field col-2 savecheck">
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={form.saveAddress}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, saveAddress: e.target.checked }))
+                      }
+                    />
+                    <span className="switch__track" />
+                    Salvar este endereço na minha conta
+                  </label>
+
+                  {form.saveAddress && (
+                    <input
+                      className="input"
+                      value={form.addressLabel}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, addressLabel: e.target.value }))
+                      }
+                      placeholder="Dê um nome: Casa, Trabalho, Escola…"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
           </section>
 
           {/* ---------------------------------------------------- Pagamento */}
@@ -507,7 +470,9 @@ export default function Checkout() {
                     <span>
                       {value === 'pix'
                         ? 'Chave enviada após o pedido'
-                        : 'Enviamos o boleto após a confirmação'}
+                        : value === 'cartao'
+                          ? 'Enviamos um link seguro para pagamento'
+                          : 'Enviamos o boleto após a confirmação'}
                     </span>
                   </span>
                 </label>
@@ -554,9 +519,9 @@ export default function Checkout() {
                 <dd>{money(subtotal)}</dd>
               </div>
               <div>
-                <dt>{isPickup ? 'Retirada' : 'Entrega'}</dt>
+                <dt>Entrega</dt>
                 <dd>
-                  {!isPickup && shipping === null ? (
+                  {shipping === null ? (
                     <span className="pending">A calcular</span>
                   ) : ship === 0 ? (
                     <span className="free">Grátis</span>

@@ -657,7 +657,6 @@ export const SETTINGS = {
   instagram: 'totalpack',
   pixKey: 'contato@totalpack.com.br',
   freeShippingFrom: 199,
-  pickupEnabled: true,
   lowStockThreshold: 20,
 
   /**
@@ -811,15 +810,15 @@ export function makeDemoOrders() {
         city: 'São Paulo',
         state: 'SP',
       },
-      delivery: i % 4 === 0 ? 'retirada' : 'entrega',
-      deliveryZone: i % 4 === 0 ? '' : zone.name,
-      deliveryDays: i % 4 === 0 ? 0 : zone.days,
-      payment: ['pix', 'pix', 'boleto', 'pix'][i % 4],
+      delivery: 'entrega',
+      deliveryZone: zone.name,
+      deliveryDays: zone.days,
+      payment: ['pix', 'cartao', 'boleto', 'pix'][i % 4],
       note: i % 5 === 0 ? 'Colorset nas cores azul, verde e amarelo.' : '',
       items,
       subtotal,
-      shipping: i % 4 === 0 ? 0 : shipping,
-      total: subtotal + (i % 4 === 0 ? 0 : shipping),
+      shipping,
+      total: subtotal + shipping,
     }
   })
 }

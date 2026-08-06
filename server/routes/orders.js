@@ -32,19 +32,12 @@ orderRoutes.post(
     const customerId = req.user?.role === 'customer' ? req.user.sub : null
 
     const settings = await one(`SELECT * FROM settings WHERE id = true`)
-    const isPickup = d.delivery === 'retirada'
 
-    if (isPickup && !settings.pickup_enabled) {
-      throw badRequest('A retirada na loja está desativada no momento.')
-    }
-
-    // Frete conferido antes da transação: erro de área não deve travar linhas.
-    let zone = null
-    if (!isPickup) {
-      zone = await findZone(d.cep)
-      if (!zone) {
-        throw badRequest('Ainda não entregamos neste CEP.', { cep: 'Fora da área de entrega.' })
-      }
+    // Todo pedido é entrega — a retirada saiu da loja. Frete conferido antes
+    // da transação: erro de área não deve travar linhas de produto.
+    const zone = await findZone(d.cep)
+    if (!zone) {
+      throw badRequest('Ainda não entregamos neste CEP.', { cep: 'Fora da área de entrega.' })
     }
 
     const order = await transaction(async (client) => {
@@ -82,7 +75,7 @@ orderRoutes.post(
 
       const subtotal = lines.reduce((acc, l) => acc + l.price * l.qty, 0)
       const free = subtotal >= Number(settings.free_shipping_from) && subtotal > 0
-      const shipping = isPickup || free ? 0 : Number(zone.fee)
+      const shipping = free ? 0 : Number(zone.fee)
       const total = subtotal + shipping
 
       const { rows: created } = await client.query(
@@ -95,10 +88,9 @@ orderRoutes.post(
          RETURNING *`,
         [
           customerId, d.name, d.email, d.phone,
-          d.delivery, zone?.name ?? '', zone?.days ?? 0,
-          isPickup ? '' : normalizeCep(d.cep), isPickup ? '' : d.street,
-          isPickup ? '' : d.number, isPickup ? '' : d.complement,
-          isPickup ? '' : d.district, isPickup ? '' : d.city, isPickup ? '' : d.state,
+          'entrega', zone.name, zone.days,
+          normalizeCep(d.cep), d.street, d.number, d.complement,
+          d.district, d.city, d.state,
           d.payment, d.note, subtotal, shipping, total,
         ],
       )
@@ -120,7 +112,7 @@ orderRoutes.post(
       }
 
       // Guarda o endereço na conta, se o cliente pediu.
-      if (customerId && d.saveAddress && !isPickup) {
+      if (customerId && d.saveAddress) {
         const { rows: existing } = await client.query(
           `SELECT id FROM addresses WHERE customer_id = $1`,
           [customerId],

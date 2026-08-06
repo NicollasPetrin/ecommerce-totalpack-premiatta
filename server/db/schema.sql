@@ -131,6 +131,8 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- 'retirada' permanece no tipo por causa dos pedidos antigos; a loja deixou de
+-- oferecer a opção, e o servidor só aceita 'entrega' em pedidos novos.
 DO $$ BEGIN
   CREATE TYPE delivery_mode AS ENUM ('entrega', 'retirada');
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -206,6 +208,8 @@ CREATE TABLE IF NOT EXISTS settings (
   instagram           TEXT NOT NULL DEFAULT '',
   pix_key             TEXT NOT NULL DEFAULT '',
   free_shipping_from  NUMERIC(10,2) NOT NULL DEFAULT 199,
+  -- Sem uso desde que a retirada saiu da loja; mantida para não quebrar
+  -- bancos já existentes.
   pickup_enabled      BOOLEAN NOT NULL DEFAULT true,
   low_stock_threshold INTEGER NOT NULL DEFAULT 20,
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()

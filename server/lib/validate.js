@@ -110,7 +110,6 @@ export const schemas = {
     instagram: z.string().trim().default(''),
     pixKey: z.string().trim().default(''),
     freeShippingFrom: money,
-    pickupEnabled: z.boolean(),
     lowStockThreshold: z.coerce.number().int().min(0),
   }),
 
@@ -128,8 +127,10 @@ export const schemas = {
       name: z.string().trim().min(3, 'Informe o nome completo.'),
       email: z.string().trim().toLowerCase().email('E-mail inválido.').or(z.literal('')),
       phone: z.string().trim().min(10, 'Telefone incompleto.'),
-      delivery: z.enum(['entrega', 'retirada']),
-      payment: z.enum(['pix', 'boleto']),
+      // A loja deixou de oferecer retirada. O valor 'retirada' continua no
+      // banco por causa dos pedidos antigos, mas não é aceito em novos.
+      delivery: z.literal('entrega').default('entrega'),
+      payment: z.enum(['pix', 'boleto', 'cartao']),
       note: z.string().trim().max(500).default(''),
       cep: z.string().default(''),
       street: z.string().trim().default(''),
@@ -142,7 +143,6 @@ export const schemas = {
       addressLabel: z.string().trim().default(''),
     })
     .superRefine((o, ctx) => {
-      if (o.delivery !== 'entrega') return
       const digits = o.cep.replace(/\D/g, '')
       if (digits.length !== 8) {
         ctx.addIssue({ code: 'custom', path: ['cep'], message: 'CEP incompleto.' })

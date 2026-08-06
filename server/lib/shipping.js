@@ -42,17 +42,10 @@ export async function findOverlaps({ cepStart, cepEnd, excludeId = null }) {
 }
 
 /**
- * Frete de um pedido. `subtotal` decide o frete grátis; retirada é sempre zero.
- * Lança quando não atendemos o CEP — o pedido não pode seguir às cegas.
+ * Frete de um pedido: zero se o subtotal alcança o frete grátis, senão o preço
+ * da zona. Quem cria o pedido já garantiu que a zona existe.
  */
-export async function quote({ cep, subtotal, delivery, freeShippingFrom }) {
-  if (delivery === 'retirada') {
-    return { fee: 0, zone: null, free: false }
-  }
-
-  const zone = await findZone(cep)
-  if (!zone) return { fee: 0, zone: null, free: false, outOfRange: true }
-
+export function quote({ zone, subtotal, freeShippingFrom }) {
   const free = subtotal >= Number(freeShippingFrom) && subtotal > 0
   return { fee: free ? 0 : Number(zone.fee), zone, free }
 }

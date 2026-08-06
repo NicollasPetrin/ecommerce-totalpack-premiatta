@@ -3,6 +3,7 @@ import { useStore } from '../store/StoreContext'
 import { money } from '../lib/format'
 import ProductCard from '../components/ProductCard'
 import ProductArt from '../components/ProductArt'
+import HeroCarousel from '../components/HeroCarousel'
 import Logo from '../components/Logo'
 import Icon from '../components/Icon'
 
@@ -21,6 +22,13 @@ export default function Home() {
   const featured = live.filter((p) => p.featured).slice(0, 4)
   const ordered = [...categories].sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
   const countOf = (catId) => live.filter((p) => p.categoryId === catId).length
+
+  /* Vitrine do carrossel: destaques primeiro, completados com promoções até
+     dar um giro que valha a pena. */
+  const carouselItems = [
+    ...live.filter((p) => p.featured),
+    ...live.filter((p) => !p.featured && p.promo > 0 && p.promo < p.price),
+  ].slice(0, 8)
 
   const mailLink = `mailto:${settings.email}?subject=${encodeURIComponent(
     'Ajuda com um pedido de material escolar',
@@ -49,16 +57,9 @@ export default function Home() {
           <p className="open__note">
             <Icon name="truck" size={18} />
             Entrega grátis em pedidos acima de {money(settings.freeShippingFrom)}
-            {settings.pickupEnabled && ' · Você também pode retirar na loja'}
           </p>
 
-          <div className="open__art" aria-hidden="true">
-            {featured.slice(0, 3).map((p, i) => (
-              <div key={p.id} className={`open__card open__card--${i + 1}`}>
-                <ProductArt product={p} />
-              </div>
-            ))}
-          </div>
+          <HeroCarousel products={carouselItems} />
         </div>
       </section>
 
@@ -129,7 +130,7 @@ export default function Home() {
             <p>
               Preencha nome, telefone e endereço. Nós entramos em contato para
               confirmar o pagamento e a entrega.{' '}
-              <strong>Não pedimos dados do cartão.</strong>
+              <strong>Nenhum dado de cartão é digitado aqui.</strong>
             </p>
           </li>
         </ol>

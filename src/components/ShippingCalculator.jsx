@@ -77,8 +77,7 @@ export default function ShippingCalculator({ compact = false }) {
           <Icon name="alert" size={16} />
           <span>
             Ainda não entregamos nesse CEP.{' '}
-            <a href={`mailto:${settings.email}`}>Fale conosco por e-mail</a>
-            {settings.pickupEnabled && ' ou retire na loja'}.
+            <a href={`mailto:${settings.email}`}>Fale conosco por e-mail</a>.
           </span>
         </p>
       )}

@@ -115,6 +115,5 @@ export const settings = (r) => ({
   instagram: r.instagram,
   pixKey: r.pix_key,
   freeShippingFrom: Number(r.free_shipping_from),
-  pickupEnabled: r.pickup_enabled,
   lowStockThreshold: r.low_stock_threshold,
 })
