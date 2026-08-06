@@ -5,9 +5,11 @@ import Modal, { ConfirmDialog } from '../../components/Modal'
 import ProductArt, { ART_KINDS, ART_LABELS } from '../../components/ProductArt'
 import Icon from '../../components/Icon'
 
+/* Cores das ilustrações: as quatro da logo primeiro, depois tons de apoio. */
 const TINTS = [
-  '#0071e3', '#0a84ff', '#30d158', '#248a3d', '#ff9f0a', '#c04c00',
-  '#ff375f', '#d70015', '#bf5af2', '#6c3ad6', '#ffd60a', '#6e6e73',
+  '#d32a1f', '#f2a81d', '#1f7a3a', '#0e8fa2',
+  '#e5683a', '#c9a227', '#45a049', '#2c7d9e',
+  '#a3231a', '#ff8a3d', '#8e6f1f', '#6e6a63',
 ]
 
 const blank = (categoryId) => ({
@@ -20,7 +22,7 @@ const blank = (categoryId) => ({
   unit: 'unidade',
   sku: '',
   art: 'sheet',
-  tint: '#0071e3',
+  tint: '#0e8fa2',
   image: '',
   featured: false,
   active: true,

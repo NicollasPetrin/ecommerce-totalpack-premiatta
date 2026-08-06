@@ -26,39 +26,56 @@
   --tracking-tight: -0.022em;
   --tracking-tighter: -0.035em;
 
-  /* ---- Cores (light) ---- */
+  /* ---- Cores (light) ----
+     Paleta tirada da logo: vermelho da palavra, dourado do contorno, verde do
+     aro e o azul-petróleo de um dos presentes. Os neutros ganharam um leve
+     tom quente para conversar com ela — cinza puro ao lado do vermelho fica
+     acinzentado demais.
+
+     O vermelho da marca e o vermelho de erro são propositalmente diferentes:
+     com um só tom, "Comprar" e "Excluir" ficariam com a mesma cor, e a loja
+     perderia o sinal de perigo justamente onde ele importa. */
+
   --bg: #ffffff;
   --bg-elevated: #ffffff;
-  --bg-grouped: #f5f5f7;
-  --bg-grouped-2: #fafafc;
-  --bg-sunken: #ebebf0;
+  --bg-grouped: #f8f5f0;
+  --bg-grouped-2: #fcfaf7;
+  --bg-sunken: #efeae1;
 
-  --label: #1d1d1f;
-  --label-2: #6e6e73;
-  --label-3: #86868b;
-  --label-4: #aeaeb2;
+  --label: #23201c;
+  --label-2: #6f6a62;
+  --label-3: #8b847a;
+  --label-4: #b2aba1;
 
-  --separator: rgba(0, 0, 0, 0.08);
-  --separator-strong: rgba(0, 0, 0, 0.14);
+  --separator: rgba(35, 32, 28, 0.09);
+  --separator-strong: rgba(35, 32, 28, 0.16);
 
-  --accent: #0071e3;
-  --accent-hover: #0077ed;
-  --accent-press: #0062c4;
-  --accent-soft: rgba(0, 113, 227, 0.1);
+  /* Marca */
+  --accent: #d32a1f;
+  --accent-hover: #e5382c;
+  --accent-press: #b0211a;
+  --accent-soft: rgba(211, 42, 31, 0.1);
 
-  --green: #248a3d;
-  --green-soft: rgba(36, 138, 61, 0.12);
-  --orange: #c04c00;
-  --orange-soft: rgba(192, 76, 0, 0.12);
-  --red: #d70015;
-  --red-soft: rgba(215, 0, 21, 0.1);
-  --purple: #6c3ad6;
-  --purple-soft: rgba(108, 58, 214, 0.12);
+  /* Dourado — promoções e destaques. Sobre ele, texto escuro. */
+  --gold: #f2a81d;
+  --gold-soft: rgba(242, 168, 29, 0.18);
+  --gold-ink: #5c3d00;
+
+  --green: #1f7a3a;
+  --green-soft: rgba(31, 122, 58, 0.12);
+  --teal: #0e8fa2;
+  --teal-soft: rgba(14, 143, 162, 0.13);
+  --orange: #b45309;
+  --orange-soft: rgba(180, 83, 9, 0.12);
+
+  /* Perigo — mais fechado e menos saturado que o vermelho da marca. */
+  --red: #9c1c14;
+  --red-soft: rgba(156, 28, 20, 0.1);
 
   /* Materiais translúcidos */
-  --material-bar: rgba(255, 255, 255, 0.72);
-  --material-panel: rgba(255, 255, 255, 0.86);
-  --material-scrim: rgba(0, 0, 0, 0.32);
+  --material-bar: rgba(255, 253, 250, 0.74);
+  --material-panel: rgba(255, 253, 250, 0.88);
+  --material-scrim: rgba(35, 25, 20, 0.34);
   --blur: saturate(180%) blur(20px);
 
   /* ---- Forma ---- */
@@ -95,37 +112,42 @@
 /* ---- Modo escuro ---- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #000000;
-    --bg-elevated: #1c1c1e;
-    --bg-grouped: #0a0a0a;
-    --bg-grouped-2: #141416;
-    --bg-sunken: #1c1c1e;
+    --bg: #100d0b;
+    --bg-elevated: #1c1815;
+    --bg-grouped: #16120f;
+    --bg-grouped-2: #1a1613;
+    --bg-sunken: #262019;
 
-    --label: #f5f5f7;
-    --label-2: #a1a1a6;
-    --label-3: #86868b;
-    --label-4: #5a5a5f;
+    --label: #f7f3ee;
+    --label-2: #a8a099;
+    --label-3: #8a827a;
+    --label-4: #5f5952;
 
-    --separator: rgba(255, 255, 255, 0.1);
-    --separator-strong: rgba(255, 255, 255, 0.18);
+    --separator: rgba(255, 245, 235, 0.1);
+    --separator-strong: rgba(255, 245, 235, 0.18);
 
-    --accent: #0a84ff;
-    --accent-hover: #3d9bff;
-    --accent-press: #0071e3;
-    --accent-soft: rgba(10, 132, 255, 0.16);
+    --accent: #ff5a4a;
+    --accent-hover: #ff7566;
+    --accent-press: #e5412f;
+    --accent-soft: rgba(255, 90, 74, 0.17);
 
-    --green: #30d158;
-    --green-soft: rgba(48, 209, 88, 0.16);
-    --orange: #ff9f0a;
-    --orange-soft: rgba(255, 159, 10, 0.16);
-    --red: #ff453a;
-    --red-soft: rgba(255, 69, 58, 0.16);
-    --purple: #bf5af2;
-    --purple-soft: rgba(191, 90, 242, 0.16);
+    --gold: #ffbe3d;
+    --gold-soft: rgba(255, 190, 61, 0.18);
+    --gold-ink: #2b1c00;
 
-    --material-bar: rgba(22, 22, 24, 0.72);
-    --material-panel: rgba(28, 28, 30, 0.9);
-    --material-scrim: rgba(0, 0, 0, 0.6);
+    --green: #45c96a;
+    --green-soft: rgba(69, 201, 106, 0.17);
+    --teal: #35c2d6;
+    --teal-soft: rgba(53, 194, 214, 0.17);
+    --orange: #ffa53d;
+    --orange-soft: rgba(255, 165, 61, 0.17);
+
+    --red: #ff6b5c;
+    --red-soft: rgba(255, 107, 92, 0.15);
+
+    --material-bar: rgba(22, 18, 15, 0.74);
+    --material-panel: rgba(28, 24, 21, 0.9);
+    --material-scrim: rgba(0, 0, 0, 0.62);
 
     --sh-1: 0 1px 2px rgba(0, 0, 0, 0.5);
     --sh-2: 0 4px 16px rgba(0, 0, 0, 0.55);
@@ -137,32 +159,35 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #000000;
-  --bg-elevated: #1c1c1e;
-  --bg-grouped: #0a0a0a;
-  --bg-grouped-2: #141416;
-  --bg-sunken: #1c1c1e;
-  --label: #f5f5f7;
-  --label-2: #a1a1a6;
-  --label-3: #86868b;
-  --label-4: #5a5a5f;
-  --separator: rgba(255, 255, 255, 0.1);
-  --separator-strong: rgba(255, 255, 255, 0.18);
-  --accent: #0a84ff;
-  --accent-hover: #3d9bff;
-  --accent-press: #0071e3;
-  --accent-soft: rgba(10, 132, 255, 0.16);
-  --green: #30d158;
-  --green-soft: rgba(48, 209, 88, 0.16);
-  --orange: #ff9f0a;
-  --orange-soft: rgba(255, 159, 10, 0.16);
-  --red: #ff453a;
-  --red-soft: rgba(255, 69, 58, 0.16);
-  --purple: #bf5af2;
-  --purple-soft: rgba(191, 90, 242, 0.16);
-  --material-bar: rgba(22, 22, 24, 0.72);
-  --material-panel: rgba(28, 28, 30, 0.9);
-  --material-scrim: rgba(0, 0, 0, 0.6);
+  --bg: #100d0b;
+  --bg-elevated: #1c1815;
+  --bg-grouped: #16120f;
+  --bg-grouped-2: #1a1613;
+  --bg-sunken: #262019;
+  --label: #f7f3ee;
+  --label-2: #a8a099;
+  --label-3: #8a827a;
+  --label-4: #5f5952;
+  --separator: rgba(255, 245, 235, 0.1);
+  --separator-strong: rgba(255, 245, 235, 0.18);
+  --accent: #ff5a4a;
+  --accent-hover: #ff7566;
+  --accent-press: #e5412f;
+  --accent-soft: rgba(255, 90, 74, 0.17);
+  --gold: #ffbe3d;
+  --gold-soft: rgba(255, 190, 61, 0.18);
+  --gold-ink: #2b1c00;
+  --green: #45c96a;
+  --green-soft: rgba(69, 201, 106, 0.17);
+  --teal: #35c2d6;
+  --teal-soft: rgba(53, 194, 214, 0.17);
+  --orange: #ffa53d;
+  --orange-soft: rgba(255, 165, 61, 0.17);
+  --red: #ff6b5c;
+  --red-soft: rgba(255, 107, 92, 0.15);
+  --material-bar: rgba(22, 18, 15, 0.74);
+  --material-panel: rgba(28, 24, 21, 0.9);
+  --material-scrim: rgba(0, 0, 0, 0.62);
   --sh-1: 0 1px 2px rgba(0, 0, 0, 0.5);
   --sh-2: 0 4px 16px rgba(0, 0, 0, 0.55);
   --sh-3: 0 12px 34px rgba(0, 0, 0, 0.6);
@@ -298,6 +323,17 @@ ol {
   max-width: var(--page);
   margin-inline: auto;
   padding-inline: var(--gutter);
+}
+
+/* A arte da logo tem fundo branco opaco. O cartão claro faz esse branco
+   parecer proposital no tema escuro, em vez de um retângulo solto no meio
+   da tela. No tema claro ele desaparece contra o fundo. */
+.brand-logo {
+  width: auto;
+  background: #fff;
+  border-radius: 22%;
+  padding: 2px;
+  object-fit: contain;
 }
 
 .sr-only {
@@ -546,7 +582,8 @@ ol {
 .tag--orange { background: var(--orange-soft); color: var(--orange); }
 .tag--red { background: var(--red-soft); color: var(--red); }
 .tag--blue { background: var(--accent-soft); color: var(--accent); }
-.tag--purple { background: var(--purple-soft); color: var(--purple); }
+.tag--teal { background: var(--teal-soft); color: var(--teal); }
+.tag--gold { background: var(--gold-soft); color: var(--gold-ink); }
 .tag--gray { background: var(--bg-sunken); color: var(--label-2); }
 
 /* ---- Torradas (toasts) ---- */

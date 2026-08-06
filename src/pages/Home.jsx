@@ -3,6 +3,7 @@ import { useStore } from '../store/StoreContext'
 import { money } from '../lib/format'
 import ProductCard from '../components/ProductCard'
 import ProductArt from '../components/ProductArt'
+import Logo from '../components/Logo'
 import Icon from '../components/Icon'
 
 /**
@@ -30,6 +31,8 @@ export default function Home() {
       {/* ------------------------------------------------------------ Abertura */}
       <section className="open">
         <div className="wrap open__inner">
+          <Logo size={104} className="open__logo" />
+
           <h1 className="open__title">Material escolar completo</h1>
 
           <p className="open__sub">

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
+import Logo from './Logo'
 import Icon from './Icon'
 
 export default function Header() {
@@ -63,12 +64,7 @@ export default function Header() {
         </button>
 
         <Link to="/" className="nav__logo" onClick={() => setMenuOpen(false)}>
-          <span className="nav__mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none">
-              <path d="M6 4h8l4 4v12H6z" fill="currentColor" opacity=".9" />
-              <path d="M14 4v4h4" fill="currentColor" opacity=".45" />
-            </svg>
-          </span>
+          <Logo size={30} className="nav__mark" />
           {settings.storeName}
         </Link>
 

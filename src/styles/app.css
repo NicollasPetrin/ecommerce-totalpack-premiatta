@@ -64,14 +64,8 @@
   opacity: 0.75;
 }
 
+/* Sem largura fixa: a logo não é quadrada e a altura já vem do componente. */
 .nav__mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: var(--accent);
-  color: #fff;
-  display: grid;
-  place-items: center;
   flex: none;
 }
 
@@ -246,6 +240,12 @@
 }
 
 .open__inner { text-align: center; }
+
+.open__logo {
+  display: block;
+  margin: 0 auto 22px;
+  animation: rise 0.7s var(--ease-out) both;
+}
 
 .open__title {
   font-size: clamp(2.25rem, 1.3rem + 4vw, 4rem);
@@ -572,14 +572,16 @@
 
 .pcard:hover .pcard__art { transform: scale(1.045); }
 
+/* Desconto em dourado, não em vermelho: o vermelho agora é a cor da marca,
+   e reservá-lo para promoção deixaria a loja inteira gritando igual. */
 .pcard__badge {
   position: absolute;
   top: 12px;
   left: 12px;
   padding: 4px 9px;
   border-radius: var(--r-full);
-  background: var(--red);
-  color: #fff;
+  background: var(--gold);
+  color: var(--gold-ink);
   font-size: var(--fs-caption);
   font-weight: 700;
   letter-spacing: 0;
@@ -663,6 +665,11 @@
   grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 40px;
   padding-bottom: 44px;
+}
+
+.foot__logo {
+  display: block;
+  margin-bottom: 14px;
 }
 
 .foot__brand strong {
@@ -929,8 +936,8 @@
   left: 18px;
   padding: 6px 13px;
   border-radius: var(--r-full);
-  background: var(--red);
-  color: #fff;
+  background: var(--gold);
+  color: var(--gold-ink);
   font-size: var(--fs-footnote);
   font-weight: 700;
 }
@@ -1626,14 +1633,8 @@
   text-align: center;
 }
 
-.auth__icon {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
-  display: grid;
-  place-items: center;
+.auth__logo {
+  display: block;
   margin: 0 auto 18px;
 }
 

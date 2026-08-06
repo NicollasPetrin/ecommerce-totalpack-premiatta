@@ -276,7 +276,7 @@ export const ART_LABELS = {
 }
 
 export default function ProductArt({ product, className = '', ...rest }) {
-  const { image, art = 'sheet', tint = '#0071e3', name } = product ?? {}
+  const { image, art = 'sheet', tint = '#0e8fa2', name } = product ?? {}
 
   if (image) {
     return <img src={image} alt={name ?? ''} className={className} loading="lazy" {...rest} />

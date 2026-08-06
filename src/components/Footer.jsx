@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import { money } from '../lib/format'
+import Logo from './Logo'
 import Icon from './Icon'
 
 export default function Footer() {
@@ -11,6 +12,7 @@ export default function Footer() {
     <footer className="foot">
       <div className="wrap foot__grid">
         <div className="foot__brand">
+          <Logo size={72} className="foot__logo" />
           <strong>{settings.storeName}</strong>
           <p>{settings.tagline}</p>
           <div className="foot__contact">

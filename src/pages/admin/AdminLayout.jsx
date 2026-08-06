@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store/StoreContext'
+import Logo from '../../components/Logo'
 import Icon from '../../components/Icon'
 
 const NAV = [
@@ -33,12 +34,7 @@ export default function AdminLayout() {
     <div className={`admin${open ? ' is-open' : ''}`}>
       <aside className="asidebar">
         <div className="asidebar__brand">
-          <span className="asidebar__mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
-              <path d="M6 4h8l4 4v12H6z" fill="currentColor" opacity=".9" />
-              <path d="M14 4v4h4" fill="currentColor" opacity=".45" />
-            </svg>
-          </span>
+          <Logo size={32} className="asidebar__mark" />
           <div>
             <strong>{settings.storeName}</strong>
             <span>Painel</span>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store/StoreContext'
+import Logo from '../../components/Logo'
 import Icon from '../../components/Icon'
 
 export default function AdminLogin() {
@@ -36,9 +37,7 @@ export default function AdminLogin() {
   return (
     <div className="login">
       <form className="login__card" onSubmit={submit}>
-        <span className="login__icon">
-          <Icon name="lock" size={24} />
-        </span>
+        <Logo size={78} className="login__logo" />
 
         <h1>Painel administrativo</h1>
         <p>Entre para gerenciar produtos, pedidos e configurações da loja.</p>

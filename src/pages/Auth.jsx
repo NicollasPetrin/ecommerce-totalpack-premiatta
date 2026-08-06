@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import { maskPhone } from '../lib/format'
+import Logo from '../components/Logo'
 import Icon from '../components/Icon'
 
 /** Entrar e criar conta na mesma tela, alternando entre os dois modos. */
@@ -74,9 +75,7 @@ export default function Auth() {
   return (
     <div className="wrap auth">
       <div className="auth__card">
-        <span className="auth__icon">
-          <Icon name="user" size={24} />
-        </span>
+        <Logo size={78} className="auth__logo" />
 
         <h1>{mode === 'entrar' ? 'Entrar na sua conta' : 'Criar conta'}</h1>
         <p className="auth__lead">

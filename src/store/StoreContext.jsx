@@ -18,7 +18,7 @@ const StoreContext = createContext(null)
 export const ORDER_STATUS = {
   pendente: { label: 'Pendente', tone: 'orange' },
   pago: { label: 'Pago', tone: 'blue' },
-  enviado: { label: 'Enviado', tone: 'purple' },
+  enviado: { label: 'Enviado', tone: 'teal' },
   entregue: { label: 'Entregue', tone: 'green' },
   cancelado: { label: 'Cancelado', tone: 'red' },
 }
@@ -318,7 +318,7 @@ export function StoreProvider({ children }) {
       stock: data.stock,
       unit: data.unit ?? 'unidade',
       art: data.art ?? 'sheet',
-      tint: data.tint ?? '#0071e3',
+      tint: data.tint ?? '#0e8fa2',
       image: data.image || null,
       specs: data.specs ?? [],
       featured: Boolean(data.featured),
