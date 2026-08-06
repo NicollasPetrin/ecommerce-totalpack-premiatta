@@ -45,8 +45,33 @@ O painel tem:
   venda, especificações, foto própria ou ilustração vetorial (24 desenhos ×
   12 cores), destaque na home e visibilidade na loja.
 - **Categorias** — CRUD e reordenação do menu.
-- **Configurações** — dados da loja, WhatsApp, chave PIX, regras de frete,
-  limite de estoque baixo, troca de senha e backup em JSON.
+- **Entrega** — regiões por faixa de CEP, com preço e prazo próprios, regra de
+  frete grátis, retirada na loja e um simulador para testar qualquer CEP.
+- **Configurações** — dados da loja, WhatsApp, chave PIX, limite de estoque
+  baixo, troca de senha e backup em JSON.
+
+## Frete
+
+O cálculo é uma **tabela por faixa de CEP**, não uma consulta às
+transportadoras: o cliente digita o CEP, o sistema procura a primeira região
+ativa que contenha aquele número e mostra preço e prazo. Sem servidor, sem
+token, sem chamada externa — funciona em hospedagem estática.
+
+As regiões que vêm cadastradas cobrem o Brasil inteiro e são um ponto de
+partida para uma loja em São Paulo. **Revise os valores antes de vender:**
+papel é pesado (uma resma A4 tem cerca de 2,5 kg) e um pedido com dez resmas
+custa muito mais para enviar do que a tabela sugere. O painel impede o cadastro
+de duas regiões com faixas sobrepostas, porque a busca sempre pegaria a
+primeira.
+
+Se um CEP não cair em nenhuma região, o cliente vê um aviso e é direcionado ao
+WhatsApp ou à retirada — o pedido não é aceito às cegas.
+
+Para trocar por cotação real (Correios, Jadlog, Melhor Envio), o ponto de
+mudança é `src/lib/shipping.js`: ele passa a chamar uma função no servidor. Vai
+ser preciso hospedar em algo que rode backend (Vercel, por exemplo) e
+acrescentar peso e dimensões ao cadastro de produto — nenhuma API cota sem
+isso. As telas não mudam.
 
 ## Como a loja funciona
 
@@ -61,13 +86,14 @@ chega até você. Não há cobrança online nem coleta de dados de cartão.
 src/
   data/seed.js            catálogo inicial (34 produtos, 7 categorias, 12 pedidos demo)
   lib/format.js           moeda, datas, máscaras, slug
+  lib/shipping.js         frete por faixa de CEP
   lib/storage.js          leitura/gravação, backup, hash da senha
   store/StoreContext.jsx  estado global: produtos, pedidos, carrinho, sessão
   components/             Header, Footer, CartDrawer, ProductCard, Modal, Icon…
   components/ProductArt   ilustrações vetoriais dos produtos
   pages/                  Home, Catalog, Product, Checkout, OrderSuccess
   pages/admin/            AdminLayout, Login, Dashboard, Products, Categories,
-                          Orders, Settings
+                          Orders, Shipping, Settings
   styles/tokens.css       design tokens + reset + componentes base
   styles/app.css          loja
   styles/admin.css        painel

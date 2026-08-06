@@ -299,7 +299,13 @@ export default function AdminOrders() {
                     <dd>
                       {current.delivery === 'retirada'
                         ? `Retirada — ${settings.address}`
-                        : 'Entrega no endereço'}
+                        : current.deliveryZone
+                          ? `Entrega — ${current.deliveryZone} (${
+                              current.deliveryDays === 1
+                                ? '1 dia útil'
+                                : `${current.deliveryDays} dias úteis`
+                            })`
+                          : 'Entrega no endereço'}
                     </dd>
                   </div>
                   {current.delivery === 'entrega' && (

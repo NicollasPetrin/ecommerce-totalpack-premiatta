@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useStore } from '../../store/StoreContext'
 import { exportAll } from '../../lib/storage'
 import { maskPhone } from '../../lib/format'
@@ -10,8 +11,6 @@ export default function AdminSettings() {
 
   const [f, setF] = useState({
     ...settings,
-    shippingFee: String(settings.shippingFee),
-    freeShippingFrom: String(settings.freeShippingFrom),
     lowStockThreshold: String(settings.lowStockThreshold),
   })
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
@@ -31,8 +30,6 @@ export default function AdminSettings() {
       ...s,
       ...f,
       whatsapp: String(f.whatsapp).replace(/\D/g, ''),
-      shippingFee: Number(String(f.shippingFee).replace(',', '.')) || 0,
-      freeShippingFrom: Number(String(f.freeShippingFrom).replace(',', '.')) || 0,
       lowStockThreshold: Number(f.lowStockThreshold) || 0,
     }))
     toast('Configurações salvas.')
@@ -148,28 +145,6 @@ export default function AdminSettings() {
 
             <div className="form-grid">
               <div className="field">
-                <label htmlFor="s-fee">Frete padrão (R$)</label>
-                <input
-                  id="s-fee"
-                  className="input"
-                  inputMode="decimal"
-                  value={f.shippingFee}
-                  onChange={set('shippingFee')}
-                />
-              </div>
-
-              <div className="field">
-                <label htmlFor="s-free">Frete grátis a partir de (R$)</label>
-                <input
-                  id="s-free"
-                  className="input"
-                  inputMode="decimal"
-                  value={f.freeShippingFrom}
-                  onChange={set('freeShippingFrom')}
-                />
-              </div>
-
-              <div className="field">
                 <label htmlFor="s-low">Alerta de estoque baixo (un.)</label>
                 <input
                   id="s-low"
@@ -178,14 +153,16 @@ export default function AdminSettings() {
                   value={f.lowStockThreshold}
                   onChange={set('lowStockThreshold')}
                 />
+                <span className="hint">
+                  Produtos neste nível aparecem destacados na visão geral.
+                </span>
               </div>
 
-              <div className="field" style={{ justifyContent: 'flex-end' }}>
-                <label className="switch">
-                  <input type="checkbox" checked={f.pickupEnabled} onChange={set('pickupEnabled')} />
-                  <span className="switch__track" />
-                  Permitir retirada na loja
-                </label>
+              <div className="field">
+                <span className="label">Frete e retirada</span>
+                <Link to="/admin/entrega" className="btn btn--outline">
+                  <Icon name="truck" size={16} /> Configurar entrega
+                </Link>
               </div>
             </div>
 

@@ -656,10 +656,33 @@ export const SETTINGS = {
   hours: 'Seg a sex, 8h às 18h · Sáb, 9h às 13h',
   instagram: 'totalpack',
   pixKey: 'contato@totalpack.com.br',
-  shippingFee: 14.9,
   freeShippingFrom: 199,
   pickupEnabled: true,
   lowStockThreshold: 20,
+
+  /**
+   * Zonas de entrega por faixa de CEP.
+   *
+   * O cliente digita o CEP e recebe o preço da primeira zona ativa que o
+   * contenha. Os valores abaixo são um ponto de partida para uma loja em São
+   * Paulo — ajuste tudo em Painel › Entrega, inclusive removendo regiões que
+   * você não atende.
+   *
+   * Papel é pesado: uma resma A4 tem cerca de 2,5 kg. Confira suas margens
+   * antes de manter esses preços em pedidos grandes.
+   */
+  shippingZones: [
+    { id: 'z_capital', name: 'São Paulo — Capital', cepStart: '01000000', cepEnd: '05999999', fee: 12.9, days: 1, active: true },
+    { id: 'z_grande_sp', name: 'Grande São Paulo', cepStart: '06000000', cepEnd: '09999999', fee: 18.9, days: 2, active: true },
+    // Começa em 10000000 para não deixar vão entre a Grande SP e o interior.
+    { id: 'z_interior_sp', name: 'Interior de São Paulo', cepStart: '10000000', cepEnd: '19999999', fee: 24.9, days: 3, active: true },
+    { id: 'z_rj_es', name: 'Rio de Janeiro e Espírito Santo', cepStart: '20000000', cepEnd: '29999999', fee: 32.9, days: 4, active: true },
+    { id: 'z_mg', name: 'Minas Gerais', cepStart: '30000000', cepEnd: '39999999', fee: 34.9, days: 5, active: true },
+    { id: 'z_nordeste', name: 'Nordeste', cepStart: '40000000', cepEnd: '65999999', fee: 48.9, days: 8, active: true },
+    { id: 'z_norte', name: 'Norte', cepStart: '66000000', cepEnd: '69999999', fee: 59.9, days: 10, active: true },
+    { id: 'z_centro_oeste', name: 'Centro-Oeste', cepStart: '70000000', cepEnd: '79999999', fee: 42.9, days: 7, active: true },
+    { id: 'z_sul', name: 'Sul', cepStart: '80000000', cepEnd: '99999999', fee: 36.9, days: 5, active: true },
+  ],
   // Senha padrão: admin123 — troque em Admin › Configurações.
   adminPassHash: null,
   // Continua a numeração depois dos 12 pedidos de demonstração.
@@ -718,8 +741,10 @@ export function makeDemoOrders() {
       return { productId: p.id, name: p.name, sku: p.sku, price, qty, art: p.art, tint: p.tint }
     })
 
+    // Todos os pedidos de exemplo são da capital paulista (CEP 01310-100).
+    const zone = SETTINGS.shippingZones[0]
     const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0)
-    const shipping = subtotal >= SETTINGS.freeShippingFrom ? 0 : SETTINGS.shippingFee
+    const shipping = subtotal >= SETTINGS.freeShippingFrom ? 0 : zone.fee
 
     return {
       id: `ord_demo_${i + 1}`,
@@ -740,6 +765,8 @@ export function makeDemoOrders() {
         state: 'SP',
       },
       delivery: i % 4 === 0 ? 'retirada' : 'entrega',
+      deliveryZone: i % 4 === 0 ? '' : zone.name,
+      deliveryDays: i % 4 === 0 ? 0 : zone.days,
       payment: ['pix', 'pix', 'cartao', 'boleto'][i % 4],
       note: i % 5 === 0 ? 'Colorset nas cores azul, verde e amarelo.' : '',
       items,

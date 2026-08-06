@@ -238,6 +238,28 @@
   color: var(--label-3);
 }
 
+.acard__note {
+  font-size: var(--fs-footnote);
+  color: var(--label-2);
+  line-height: 1.6;
+}
+
+.ziptest {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 15px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-footnote);
+  line-height: 1.5;
+}
+
+.ziptest svg { flex: none; margin-top: 1px; }
+.ziptest--ok { background: var(--green-soft); color: var(--label-2); }
+.ziptest--ok svg { color: var(--green); }
+.ziptest--ok strong { color: var(--label); }
+.ziptest--warn { background: var(--orange-soft); color: var(--orange); }
+
 .acard__empty {
   padding: 26px 0;
   text-align: center;

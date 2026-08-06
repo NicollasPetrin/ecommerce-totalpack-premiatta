@@ -5,6 +5,7 @@ import { discountPct, effectivePrice, money } from '../lib/format'
 import ProductArt from '../components/ProductArt'
 import ProductCard from '../components/ProductCard'
 import QtyStepper from '../components/QtyStepper'
+import ShippingCalculator from '../components/ShippingCalculator'
 import Icon from '../components/Icon'
 
 export default function Product() {
@@ -125,6 +126,10 @@ export default function Product() {
               Subtotal: <strong>{money(price * qty)}</strong>
             </p>
           )}
+
+          <div className="pdp__ship">
+            <ShippingCalculator />
+          </div>
 
           <ul className="pdp__perks">
             <li>

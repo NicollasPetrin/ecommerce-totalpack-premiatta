@@ -1260,6 +1260,64 @@
 .totals dd { margin: 0; color: var(--label); }
 
 .totals .free { color: var(--green); font-weight: 600; }
+.totals .pending { color: var(--label-3); font-weight: 500; }
+
+/* ==========================================================================
+   Cálculo de frete por CEP
+   ========================================================================== */
+
+.shipcalc {
+  padding: 16px 18px;
+  border-radius: var(--r-md);
+  background: var(--bg-grouped);
+  border: 1px solid var(--separator);
+}
+
+.shipcalc label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.shipcalc label svg { color: var(--accent); }
+
+.shipcalc__row {
+  display: flex;
+  gap: 8px;
+}
+
+.shipcalc__row .input { flex: 1; min-width: 0; }
+.shipcalc__row .btn { flex: none; }
+
+.shipcalc__msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: var(--fs-footnote);
+  line-height: 1.45;
+}
+
+.shipcalc__msg svg { flex: none; margin-top: 1px; }
+.shipcalc__msg--ok { color: var(--label-2); }
+.shipcalc__msg--ok svg { color: var(--green); }
+.shipcalc__msg--ok strong { color: var(--label); }
+.shipcalc__msg--warn { color: var(--orange); }
+
+.shipcalc--compact {
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+}
+
+.shipcalc--compact label { font-size: var(--fs-caption); margin-bottom: 8px; }
+.shipcalc--compact .input { padding-block: 9px; }
+
+.pdp__ship { margin-top: 24px; }
+
+.hint--ok { color: var(--green); }
 
 .totals__grand {
   padding-top: 11px;

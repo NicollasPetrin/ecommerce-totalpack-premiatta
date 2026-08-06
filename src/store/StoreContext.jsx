@@ -11,6 +11,7 @@ import {
 import { CATEGORIES, PRODUCTS, SETTINGS, makeDemoOrders } from '../data/seed'
 import * as db from '../lib/storage'
 import { effectivePrice, uid } from '../lib/format'
+import { findZone } from '../lib/shipping'
 
 const StoreContext = createContext(null)
 
@@ -80,6 +81,9 @@ export function StoreProvider({ children }) {
     () => db.read(db.KEYS.cart, []) ?? [],
   )
 
+  // CEP informado pelo cliente: guia todo o cálculo de frete.
+  const [cep, setCep] = useState(() => db.read(db.KEYS.cep, ''))
+
   const [isAdmin, setIsAdmin] = useState(() => db.read(db.KEYS.session, false) === true)
   const [cartOpen, setCartOpen] = useState(false)
   const [toasts, setToasts] = useState([])
@@ -92,6 +96,7 @@ export function StoreProvider({ children }) {
   useEffect(() => void db.write(db.KEYS.settings, settings), [settings])
   useEffect(() => void db.write(db.KEYS.cart, cart), [cart])
   useEffect(() => void db.write(db.KEYS.session, isAdmin), [isAdmin])
+  useEffect(() => void db.write(db.KEYS.cep, cep), [cep])
 
   /* ---- Tema ---- */
   useEffect(() => {
@@ -145,9 +150,24 @@ export function StoreProvider({ children }) {
     () => cartLines.reduce((s, l) => s + l.lineTotal, 0),
     [cartLines],
   )
+  /* ---- Frete ---- */
+
+  const zones = settings.shippingZones ?? []
+  const zone = useMemo(() => findZone(cep, zones), [cep, zones])
+
   const freeShipping = subtotal >= settings.freeShippingFrom && subtotal > 0
-  const shipping = subtotal === 0 || freeShipping ? 0 : settings.shippingFee
-  const total = subtotal + shipping
+
+  /** CEP completo, mas fora de todas as zonas cadastradas. */
+  const outOfRange = cep.replace(/\D/g, '').length === 8 && !zone
+
+  /**
+   * `null` significa "ainda não dá para saber" — sem CEP ou fora de área.
+   * As telas mostram "A calcular" em vez de fingir um valor.
+   */
+  const shipping =
+    subtotal === 0 || freeShipping ? 0 : zone ? zone.fee : null
+
+  const total = subtotal + (shipping ?? 0)
 
   /* ---- Ações do carrinho ---- */
   const addToCart = useCallback(
@@ -196,7 +216,15 @@ export function StoreProvider({ children }) {
       const seq = settings.orderSeq ?? 1
       const now = new Date().toISOString()
       const isPickup = form.delivery === 'retirada'
-      const ship = isPickup ? 0 : shipping
+
+      // O frete vem do CEP do formulário, não do que estiver na tela: é ele
+      // que define para onde o pedido realmente vai.
+      const orderZone = isPickup ? null : findZone(form.cep, zones)
+      if (!isPickup && !orderZone) {
+        throw new Error('Ainda não entregamos neste CEP. Escolha retirada na loja ou fale conosco.')
+      }
+
+      const ship = isPickup || freeShipping ? 0 : orderZone.fee
 
       const order = {
         id: uid('ord'),
@@ -217,6 +245,8 @@ export function StoreProvider({ children }) {
           state: form.state,
         },
         delivery: form.delivery,
+        deliveryZone: orderZone?.name ?? '',
+        deliveryDays: orderZone?.days ?? 0,
         payment: form.payment,
         note: form.note ?? '',
         items: cartLines.map((l) => ({
@@ -247,7 +277,7 @@ export function StoreProvider({ children }) {
       clearCart()
       return order
     },
-    [cartLines, subtotal, shipping, settings.orderSeq, clearCart],
+    [cartLines, subtotal, freeShipping, zones, settings.orderSeq, clearCart],
   )
 
   const updateOrderStatus = useCallback((orderId, status) => {
@@ -298,6 +328,35 @@ export function StoreProvider({ children }) {
 
   const deleteCategory = useCallback((id) => {
     setCategories((list) => list.filter((c) => c.id !== id))
+  }, [])
+
+  /* ---- Zonas de entrega (admin) ---- */
+  const saveZone = useCallback((data) => {
+    setSettings((s) => {
+      const list = s.shippingZones ?? []
+      const next = list.some((z) => z.id === data.id)
+        ? list.map((z) => (z.id === data.id ? { ...z, ...data } : z))
+        : [...list, { ...data, id: data.id || uid('z') }]
+      // Ordenar pelo início da faixa mantém a tabela legível no painel.
+      next.sort((a, b) => Number(a.cepStart) - Number(b.cepStart))
+      return { ...s, shippingZones: next }
+    })
+  }, [])
+
+  const deleteZone = useCallback((id) => {
+    setSettings((s) => ({
+      ...s,
+      shippingZones: (s.shippingZones ?? []).filter((z) => z.id !== id),
+    }))
+  }, [])
+
+  const toggleZone = useCallback((id) => {
+    setSettings((s) => ({
+      ...s,
+      shippingZones: (s.shippingZones ?? []).map((z) =>
+        z.id === id ? { ...z, active: !z.active } : z,
+      ),
+    }))
   }, [])
 
   /* ---- Autenticação do painel ---- */
@@ -359,6 +418,14 @@ export function StoreProvider({ children }) {
       shipping,
       total,
       freeShipping,
+      // frete
+      cep,
+      setCep,
+      zone,
+      outOfRange,
+      saveZone,
+      deleteZone,
+      toggleZone,
       addToCart,
       setQty,
       removeFromCart,
@@ -391,6 +458,7 @@ export function StoreProvider({ children }) {
     [
       products, categories, orders, settings, productById, categoryById,
       cart, cartLines, cartCount, subtotal, shipping, total, freeShipping,
+      cep, zone, outOfRange, saveZone, deleteZone, toggleZone,
       addToCart, setQty, removeFromCart, clearCart, cartOpen,
       placeOrder, updateOrderStatus, deleteOrder,
       isAdmin, login, logout, changePassword,

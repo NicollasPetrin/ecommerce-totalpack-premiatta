@@ -5,6 +5,7 @@ import { useStore } from '../store/StoreContext'
 import { money } from '../lib/format'
 import ProductArt from './ProductArt'
 import QtyStepper from './QtyStepper'
+import ShippingCalculator from './ShippingCalculator'
 import Icon from './Icon'
 
 export default function CartDrawer() {
@@ -130,6 +131,8 @@ export default function CartDrawer() {
             </ul>
 
             <footer className="drawer__foot">
+              <ShippingCalculator compact />
+
               <dl className="totals">
                 <div>
                   <dt>Subtotal</dt>
@@ -137,7 +140,15 @@ export default function CartDrawer() {
                 </div>
                 <div>
                   <dt>Entrega</dt>
-                  <dd>{shipping === 0 ? <span className="free">Grátis</span> : money(shipping)}</dd>
+                  <dd>
+                    {shipping === null ? (
+                      <span className="pending">A calcular</span>
+                    ) : shipping === 0 ? (
+                      <span className="free">Grátis</span>
+                    ) : (
+                      money(shipping)
+                    )}
+                  </dd>
                 </div>
                 <div className="totals__grand">
                   <dt>Total</dt>

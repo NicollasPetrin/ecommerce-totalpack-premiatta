@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import { PAYMENT_LABEL } from '../store/StoreContext'
 import { maskCep, maskPhone, money } from '../lib/format'
+import { formatCep, zoneDeadline } from '../lib/shipping'
 import ProductArt from '../components/ProductArt'
 import Icon from '../components/Icon'
 
@@ -23,21 +24,30 @@ const EMPTY = {
 }
 
 export default function Checkout() {
-  const { cartLines, subtotal, shipping, total, settings, placeOrder, toast } = useStore()
+  const {
+    cartLines, subtotal, shipping, settings, placeOrder, toast,
+    cep, setCep, zone, outOfRange, freeShipping,
+  } = useStore()
   const navigate = useNavigate()
-  const [form, setForm] = useState(EMPTY)
+
+  // Reaproveita o CEP já calculado na sacola ou na página do produto.
+  const [form, setForm] = useState(() => ({ ...EMPTY, cep: formatCep(cep) }))
   const [errors, setErrors] = useState({})
   const [sending, setSending] = useState(false)
 
   const isPickup = form.delivery === 'retirada'
-  const ship = isPickup ? 0 : shipping
+  const ship = isPickup ? 0 : (shipping ?? 0)
   const grand = subtotal + ship
 
   const set = (key) => (e) => {
     let v = e.target.value
     if (key === 'phone') v = maskPhone(v)
-    if (key === 'cep') v = maskCep(v)
     if (key === 'state') v = v.toUpperCase().slice(0, 2)
+    if (key === 'cep') {
+      v = maskCep(v)
+      // Digitar o CEP aqui recalcula o frete na hora.
+      setCep(v.replace(/\D/g, ''))
+    }
     setForm((f) => ({ ...f, [key]: v }))
     setErrors((x) => ({ ...x, [key]: undefined }))
   }
@@ -51,6 +61,7 @@ export default function Checkout() {
 
     if (!isPickup) {
       if (form.cep.replace(/\D/g, '').length !== 8) e.cep = 'CEP incompleto.'
+      else if (outOfRange) e.cep = 'Ainda não entregamos neste CEP.'
       if (!form.address.trim()) e.address = 'Informe a rua.'
       if (!form.number.trim()) e.number = 'Informe o número.'
       if (!form.district.trim()) e.district = 'Informe o bairro.'
@@ -180,9 +191,11 @@ export default function Checkout() {
                 <span className="option__body">
                   <strong>Entrega no endereço</strong>
                   <span>
-                    {subtotal >= settings.freeShippingFrom
+                    {freeShipping
                       ? 'Frete grátis neste pedido'
-                      : `${money(settings.shippingFee)} · 2 a 4 dias úteis`}
+                      : zone
+                        ? `${money(zone.fee)} · chega em ${zoneDeadline(zone)}`
+                        : 'Informe o CEP abaixo para ver o valor'}
                   </span>
                 </span>
               </label>
@@ -218,7 +231,13 @@ export default function Checkout() {
                     autoComplete="postal-code"
                     placeholder="01310-100"
                   />
-                  {errors.cep && <span className="err">{errors.cep}</span>}
+                  {errors.cep ? (
+                    <span className="err">{errors.cep}</span>
+                  ) : zone ? (
+                    <span className="hint hint--ok">
+                      {zone.name} · chega em {zoneDeadline(zone)}
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className={`field${errors.address ? ' has-error' : ''}`}>
@@ -375,7 +394,15 @@ export default function Checkout() {
               </div>
               <div>
                 <dt>{isPickup ? 'Retirada' : 'Entrega'}</dt>
-                <dd>{ship === 0 ? <span className="free">Grátis</span> : money(ship)}</dd>
+                <dd>
+                  {!isPickup && shipping === null ? (
+                    <span className="pending">A calcular</span>
+                  ) : ship === 0 ? (
+                    <span className="free">Grátis</span>
+                  ) : (
+                    money(ship)
+                  )}
+                </dd>
               </div>
               <div className="totals__grand">
                 <dt>Total</dt>

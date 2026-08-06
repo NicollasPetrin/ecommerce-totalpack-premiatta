@@ -16,6 +16,7 @@ export const KEYS = {
   cart: `${PREFIX}cart`,
   session: `${PREFIX}session`,
   theme: `${PREFIX}theme`,
+  cep: `${PREFIX}cep`,
 }
 
 export function read(key, fallback) {
