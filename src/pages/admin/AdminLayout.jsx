@@ -8,6 +8,7 @@ const NAV = [
   { to: '/admin/pedidos', icon: 'receipt', label: 'Pedidos' },
   { to: '/admin/produtos', icon: 'box', label: 'Produtos' },
   { to: '/admin/categorias', icon: 'tags', label: 'Categorias' },
+  { to: '/admin/clientes', icon: 'user', label: 'Clientes' },
   { to: '/admin/entrega', icon: 'truck', label: 'Entrega' },
   { to: '/admin/configuracoes', icon: 'gear', label: 'Configurações' },
 ]

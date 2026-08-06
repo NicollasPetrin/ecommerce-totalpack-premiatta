@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import { PAYMENT_LABEL } from '../store/StoreContext'
@@ -21,17 +21,97 @@ const EMPTY = {
   delivery: 'entrega',
   payment: 'pix',
   note: '',
+  // Usados só quando há conta aberta.
+  addressId: '',
+  addressLabel: '',
+  saveAddress: false,
 }
 
 export default function Checkout() {
   const {
     cartLines, subtotal, shipping, settings, placeOrder, toast,
     cep, setCep, zone, outOfRange, freeShipping,
+    currentCustomer, defaultAddress,
   } = useStore()
   const navigate = useNavigate()
 
-  // Reaproveita o CEP já calculado na sacola ou na página do produto.
-  const [form, setForm] = useState(() => ({ ...EMPTY, cep: formatCep(cep) }))
+  /**
+   * Com conta aberta, o formulário já nasce preenchido com os dados do cliente
+   * e o endereço padrão. Sem conta, só reaproveita o CEP calculado na sacola.
+   */
+  const [form, setForm] = useState(() => {
+    const base = { ...EMPTY, cep: formatCep(cep) }
+    if (!currentCustomer) return base
+
+    return {
+      ...base,
+      name: currentCustomer.name,
+      phone: currentCustomer.phone,
+      email: currentCustomer.email,
+      ...(defaultAddress
+        ? {
+            addressId: defaultAddress.id,
+            cep: defaultAddress.cep,
+            address: defaultAddress.address,
+            number: defaultAddress.number,
+            complement: defaultAddress.complement,
+            district: defaultAddress.district,
+            city: defaultAddress.city,
+            state: defaultAddress.state,
+          }
+        : {}),
+    }
+  })
+
+  /**
+   * O endereço padrão da conta chega com o CEP já preenchido, mas o frete só
+   * é calculado a partir do CEP guardado no contexto. Sem isto, o resumo abre
+   * em "A calcular" mesmo com o endereço completo na tela.
+   */
+  useEffect(() => {
+    const digits = form.cep.replace(/\D/g, '')
+    if (digits.length === 8 && digits !== cep) setCep(digits)
+    // Só na montagem: depois disso quem manda é a digitação do cliente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const savedAddresses = currentCustomer?.addresses ?? []
+
+  /** Preenche o formulário com um endereço salvo e recalcula o frete. */
+  const useSavedAddress = (a) => {
+    setCep(a.cep.replace(/\D/g, ''))
+    setForm((f) => ({
+      ...f,
+      addressId: a.id,
+      cep: a.cep,
+      address: a.address,
+      number: a.number,
+      complement: a.complement,
+      district: a.district,
+      city: a.city,
+      state: a.state,
+      saveAddress: false,
+    }))
+    setErrors({})
+  }
+
+  /** Limpa os campos para digitar um endereço novo. */
+  const useNewAddress = () => {
+    setCep('')
+    setForm((f) => ({
+      ...f,
+      addressId: '',
+      cep: '',
+      address: '',
+      number: '',
+      complement: '',
+      district: '',
+      city: '',
+      state: '',
+      saveAddress: true,
+    }))
+    setErrors({})
+  }
   const [errors, setErrors] = useState({})
   const [sending, setSending] = useState(false)
 
@@ -122,6 +202,20 @@ export default function Checkout() {
 
       <form className="checkout__grid" onSubmit={submit} noValidate>
         <div className="checkout__form">
+          {!currentCustomer && (
+            <div className="loginhint">
+              <Icon name="user" size={18} />
+              <p>
+                <strong>Já tem conta?</strong>{' '}
+                <Link to="/entrar" state={{ from: '/checkout' }}>
+                  Entre
+                </Link>{' '}
+                para usar seus endereços salvos. Você também pode continuar sem
+                cadastro.
+              </p>
+            </div>
+          )}
+
           {/* -------------------------------------------------------- Dados */}
           <section className="panel">
             <h2 className="panel__title">
@@ -218,6 +312,45 @@ export default function Checkout() {
               )}
             </div>
 
+            {!isPickup && savedAddresses.length > 0 && (
+              <div className="savedaddr">
+                <span className="label">Endereços salvos na sua conta</span>
+                <div className="savedaddr__list">
+                  {savedAddresses.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className={`savedaddr__item${form.addressId === a.id ? ' is-on' : ''}`}
+                      onClick={() => useSavedAddress(a)}
+                    >
+                      <span className="savedaddr__mark" />
+                      <span>
+                        <strong>
+                          {a.label}
+                          {a.isDefault && <em> · padrão</em>}
+                        </strong>
+                        {a.address}, {a.number}
+                        {a.complement && ` — ${a.complement}`} · {a.district} · {a.city}/
+                        {a.state}
+                      </span>
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    className={`savedaddr__item${!form.addressId ? ' is-on' : ''}`}
+                    onClick={useNewAddress}
+                  >
+                    <span className="savedaddr__mark" />
+                    <span>
+                      <strong>Usar outro endereço</strong>
+                      Digitar um endereço novo para esta entrega
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {!isPickup && (
               <div className="form-grid" style={{ marginTop: 18 }}>
                 <div className={`field${errors.cep ? ' has-error' : ''}`}>
@@ -313,6 +446,33 @@ export default function Checkout() {
                   />
                   {errors.state && <span className="err">{errors.state}</span>}
                 </div>
+
+                {currentCustomer && !form.addressId && (
+                  <div className="field col-2 savecheck">
+                    <label className="switch">
+                      <input
+                        type="checkbox"
+                        checked={form.saveAddress}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, saveAddress: e.target.checked }))
+                        }
+                      />
+                      <span className="switch__track" />
+                      Salvar este endereço na minha conta
+                    </label>
+
+                    {form.saveAddress && (
+                      <input
+                        className="input"
+                        value={form.addressLabel}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, addressLabel: e.target.value }))
+                        }
+                        placeholder="Dê um nome: Casa, Trabalho, Escola…"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </section>

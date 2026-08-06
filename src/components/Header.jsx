@@ -4,7 +4,8 @@ import { useStore } from '../store/StoreContext'
 import Icon from './Icon'
 
 export default function Header() {
-  const { categories, cartCount, setCartOpen, settings, theme, setTheme } = useStore()
+  const { categories, cartCount, setCartOpen, settings, theme, setTheme, currentCustomer } =
+    useStore()
   const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -101,6 +102,15 @@ export default function Header() {
             <Icon name={searchOpen ? 'close' : 'search'} size={18} />
           </button>
 
+          <Link
+            to={currentCustomer ? '/conta' : '/entrar'}
+            className="icon-btn"
+            aria-label={currentCustomer ? 'Minha conta' : 'Entrar'}
+            title={currentCustomer ? `Conta de ${currentCustomer.name.split(' ')[0]}` : 'Entrar'}
+          >
+            <Icon name="user" size={18} />
+          </Link>
+
           <button className="icon-btn nav__bag" onClick={() => setCartOpen(true)} aria-label="Sacola">
             <Icon name="bag" size={18} />
             {cartCount > 0 && <span className="nav__count">{cartCount}</span>}
@@ -144,6 +154,10 @@ export default function Header() {
               {c.name} <Icon name="chevronRight" size={17} />
             </Link>
           ))}
+          <Link to={currentCustomer ? '/conta' : '/entrar'} onClick={() => setMenuOpen(false)}>
+            {currentCustomer ? 'Minha conta' : 'Entrar na minha conta'}{' '}
+            <Icon name="user" size={17} />
+          </Link>
           <Link to="/admin" onClick={() => setMenuOpen(false)} className="nav__mobile-admin">
             Painel administrativo <Icon name="lock" size={16} />
           </Link>

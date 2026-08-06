@@ -690,6 +690,50 @@ export const SETTINGS = {
 }
 
 /**
+ * Conta de demonstração, para o painel de clientes não abrir vazio e para você
+ * conseguir testar o login sem se cadastrar.
+ *
+ * Senha: cliente123 (o campo `passHash: null` significa "usar a senha padrão",
+ * mesmo esquema do acesso administrativo).
+ */
+export const CUSTOMERS = [
+  {
+    id: 'cus_demo',
+    name: 'Ana Beatriz Moura',
+    email: 'ana.moura@email.com',
+    phone: '(11) 98812-4471',
+    passHash: null,
+    createdAt: new Date(Date.now() - 86400000 * 54).toISOString(),
+    addresses: [
+      {
+        id: 'addr_demo_1',
+        label: 'Casa',
+        cep: '01310-100',
+        address: 'Av. Paulista',
+        number: '1000',
+        complement: 'Apto 84',
+        district: 'Bela Vista',
+        city: 'São Paulo',
+        state: 'SP',
+        isDefault: true,
+      },
+      {
+        id: 'addr_demo_2',
+        label: 'Trabalho',
+        cep: '04538-133',
+        address: 'Av. Brigadeiro Faria Lima',
+        number: '3477',
+        complement: '14º andar',
+        district: 'Itaim Bibi',
+        city: 'São Paulo',
+        state: 'SP',
+        isDefault: false,
+      },
+    ],
+  },
+]
+
+/**
  * Pedidos de demonstração dos últimos 30 dias, para o painel não abrir vazio.
  * Podem ser apagados a qualquer momento em Admin › Pedidos.
  */
@@ -752,6 +796,9 @@ export function makeDemoOrders() {
       createdAt,
       updatedAt: createdAt,
       status: status[i % status.length],
+      // Os pedidos da Ana ficam ligados à conta de demonstração; o resto são
+      // compras sem cadastro, que a loja continua aceitando.
+      customerId: nome === 'Ana Beatriz Moura' ? 'cus_demo' : null,
       customer: {
         name: nome,
         phone: telefone,

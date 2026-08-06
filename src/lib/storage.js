@@ -17,6 +17,8 @@ export const KEYS = {
   session: `${PREFIX}session`,
   theme: `${PREFIX}theme`,
   cep: `${PREFIX}cep`,
+  customers: `${PREFIX}customers`,
+  customerSession: `${PREFIX}customer-session`,
 }
 
 export function read(key, fallback) {
@@ -62,6 +64,7 @@ export function exportAll() {
     products: read(KEYS.products, []),
     categories: read(KEYS.categories, []),
     orders: read(KEYS.orders, []),
+    customers: read(KEYS.customers, []),
     settings: read(KEYS.settings, {}),
   }
 }
@@ -74,6 +77,7 @@ export function importAll(data) {
   if (Array.isArray(data.products)) write(KEYS.products, data.products)
   if (Array.isArray(data.categories)) write(KEYS.categories, data.categories)
   if (Array.isArray(data.orders)) write(KEYS.orders, data.orders)
+  if (Array.isArray(data.customers)) write(KEYS.customers, data.customers)
   if (data.settings) write(KEYS.settings, data.settings)
   return true
 }

@@ -45,10 +45,33 @@ O painel tem:
   venda, especificações, foto própria ou ilustração vetorial (24 desenhos ×
   12 cores), destaque na home e visibilidade na loja.
 - **Categorias** — CRUD e reordenação do menu.
+- **Clientes** — contas cadastradas, com endereços, pedidos, total gasto e
+  quantos pedidos vieram sem cadastro.
 - **Entrega** — regiões por faixa de CEP, com preço e prazo próprios, regra de
   frete grátis, retirada na loja e um simulador para testar qualquer CEP.
 - **Configurações** — dados da loja, WhatsApp, chave PIX, limite de estoque
   baixo, troca de senha e backup em JSON.
+
+## Contas de clientes
+
+O cliente pode criar conta em `/entrar` e acessar `/conta` para ver os pedidos
+anteriores (com "comprar de novo"), manter uma lista de endereços com um
+padrão, e editar dados e senha. No checkout, quem está logado já encontra o
+formulário preenchido, escolhe entre os endereços salvos e pode guardar um
+endereço novo. **Comprar sem cadastro continua funcionando** — o pedido fica
+apenas sem vínculo com conta.
+
+> ### ⚠️ Não é um sistema de contas de verdade
+>
+> As contas ficam no `localStorage` — ou seja, **no aparelho onde foram
+> criadas**. A conta feita no celular não existe no computador, e limpar os
+> dados do navegador apaga tudo. A senha é conferida no próprio navegador, com
+> um hash fraco (`hash` em `storage.js`): qualquer pessoa com o DevTools aberto
+> passa por ela.
+>
+> Some a isso que endereço, telefone e e-mail são dados pessoais — guardá-los
+> assim não atende à LGPD. Antes de abrir a loja ao público, contas e
+> autenticação precisam ir para um servidor.
 
 ## Frete
 
@@ -104,9 +127,10 @@ src/
   store/StoreContext.jsx  estado global: produtos, pedidos, carrinho, sessão
   components/             Header, Footer, CartDrawer, ProductCard, Modal, Icon…
   components/ProductArt   ilustrações vetoriais dos produtos
-  pages/                  Home, Catalog, Product, Checkout, OrderSuccess
+  pages/                  Home, Catalog, Product, Checkout, OrderSuccess,
+                          Auth (entrar/criar conta), Account (minha conta)
   pages/admin/            AdminLayout, Login, Dashboard, Products, Categories,
-                          Orders, Shipping, Settings
+                          Orders, Customers, Shipping, Settings
   styles/tokens.css       design tokens + reset + componentes base
   styles/app.css          loja
   styles/admin.css        painel

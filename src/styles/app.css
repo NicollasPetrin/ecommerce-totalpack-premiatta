@@ -1607,6 +1607,359 @@
 }
 
 /* ==========================================================================
+   Entrar / criar conta
+   ========================================================================== */
+
+.auth {
+  display: grid;
+  place-items: center;
+  padding: 52px 0 80px;
+}
+
+.auth__card {
+  width: min(440px, 100%);
+  padding: 36px 32px 30px;
+  border-radius: var(--r-xl);
+  background: var(--bg-elevated);
+  border: 1px solid var(--separator);
+  box-shadow: var(--sh-2);
+  text-align: center;
+}
+
+.auth__icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 18px;
+}
+
+.auth__card h1 { font-size: var(--fs-title-3); }
+
+.auth__lead {
+  margin-top: 8px;
+  font-size: var(--fs-footnote);
+  color: var(--label-2);
+  line-height: 1.5;
+}
+
+.auth__tabs {
+  display: flex;
+  width: 100%;
+  margin: 22px 0 20px;
+}
+
+.auth__tabs button { flex: 1; justify-content: center; }
+
+.auth__card .field { text-align: left; }
+
+.auth__pass { position: relative; display: flex; align-items: center; }
+.auth__pass .input { padding-right: 46px; }
+.auth__pass .icon-btn { position: absolute; right: 5px; width: 32px; height: 32px; }
+
+.auth__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: var(--r-sm);
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: var(--fs-footnote);
+  text-align: left;
+}
+
+.auth__error svg { flex: none; }
+
+.auth__demo {
+  margin-top: 18px;
+  padding: 11px 13px;
+  border-radius: var(--r-sm);
+  background: var(--bg-grouped);
+  font-size: var(--fs-caption);
+  color: var(--label-2);
+  line-height: 1.6;
+}
+
+.auth__demo code {
+  font-family: var(--font-mono);
+  color: var(--label);
+  background: var(--bg-sunken);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.auth__guest {
+  margin-top: 16px;
+  font-size: var(--fs-footnote);
+  color: var(--label-3);
+}
+
+/* ==========================================================================
+   Minha conta
+   ========================================================================== */
+
+.account { padding: 34px 0 80px; }
+
+.account__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+
+.account__hello {
+  font-size: var(--fs-callout);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.account__head h1 {
+  font-size: var(--fs-title-1);
+  margin-top: 6px;
+}
+
+.account__meta {
+  margin-top: 8px;
+  font-size: var(--fs-footnote);
+  color: var(--label-2);
+}
+
+.account__tabs {
+  display: inline-flex;
+  margin-bottom: 26px;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.account__tabs::-webkit-scrollbar { display: none; }
+
+.account__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+
+.account__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* ---- Lista de pedidos ---- */
+
+.orderlist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.orderlist__row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--separator);
+  text-align: left;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.orderlist__row:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh-2);
+  border-color: transparent;
+}
+
+.orderlist__arts {
+  display: flex;
+  flex: none;
+}
+
+.orderlist__arts > span {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--r-xs);
+  overflow: hidden;
+  background: var(--bg-grouped);
+  border: 2px solid var(--bg-elevated);
+  margin-left: -12px;
+}
+
+.orderlist__arts > span:first-child { margin-left: 0; }
+.orderlist__arts svg, .orderlist__arts img { width: 100%; height: 100%; object-fit: cover; }
+
+.orderlist__more {
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--label-2);
+  background: var(--bg-sunken) !important;
+}
+
+.orderlist__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.orderlist__body strong { font-size: var(--fs-callout); }
+.orderlist__body span { font-size: var(--fs-caption); color: var(--label-3); }
+
+.orderlist__total { font-size: var(--fs-callout); white-space: nowrap; }
+.orderlist__chev { color: var(--label-4); flex: none; }
+
+/* ---- Endereços ---- */
+
+.addresses {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.addr {
+  padding: 18px 20px;
+  border-radius: var(--r-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--separator);
+}
+
+.addr.is-default { border-color: var(--accent); }
+
+.addr header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.addr header strong { font-size: var(--fs-callout); }
+
+.addr p {
+  font-size: var(--fs-footnote);
+  color: var(--label-2);
+  line-height: 1.55;
+}
+
+.addr footer {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--separator);
+}
+
+.addr__del { color: var(--red) !important; }
+.addr__del:hover { background: var(--red-soft) !important; }
+
+.addresses--compact .addr { background: var(--bg-grouped); }
+
+/* ==========================================================================
+   Conta dentro do checkout
+   ========================================================================== */
+
+.loginhint {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 18px;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+}
+
+.loginhint svg { color: var(--accent); flex: none; margin-top: 1px; }
+
+.loginhint p {
+  font-size: var(--fs-footnote);
+  color: var(--label-2);
+  line-height: 1.5;
+}
+
+.loginhint strong { color: var(--label); }
+
+.savedaddr { margin-top: 20px; }
+
+.savedaddr__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.savedaddr__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--separator-strong);
+  text-align: left;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.savedaddr__item:hover { border-color: var(--label-4); }
+
+.savedaddr__item.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.savedaddr__mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--separator-strong);
+  flex: none;
+  margin-top: 1px;
+  transition: border-color var(--dur-fast) var(--ease), border-width var(--dur-fast) var(--ease);
+}
+
+.savedaddr__item.is-on .savedaddr__mark {
+  border-color: var(--accent);
+  border-width: 6px;
+}
+
+.savedaddr__item > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: var(--fs-caption);
+  color: var(--label-2);
+  line-height: 1.45;
+}
+
+.savedaddr__item strong {
+  font-size: var(--fs-callout);
+  font-weight: 500;
+  color: var(--label);
+}
+
+.savedaddr__item em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+.savecheck {
+  gap: 12px;
+  padding-top: 4px;
+}
+
+/* ==========================================================================
    404
    ========================================================================== */
 
@@ -1669,6 +2022,8 @@
   .checkout__grid { grid-template-columns: 1fr; }
   .checkout__summary { position: relative; top: auto; }
 
+  .account__grid { grid-template-columns: 1fr; }
+
   .success__grid { grid-template-columns: 1fr; }
 
 }
@@ -1696,6 +2051,10 @@
   .open__art { display: none; }
 
   .deflist > div { grid-template-columns: 1fr; gap: 2px; }
+
+  .orderlist__arts > span:nth-child(n + 3) { display: none; }
+  .orderlist__row { gap: 12px; padding: 12px 14px; }
+  .addresses { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 420px) {

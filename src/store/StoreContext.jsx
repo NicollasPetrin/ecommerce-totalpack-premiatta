@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { CATEGORIES, PRODUCTS, SETTINGS, makeDemoOrders } from '../data/seed'
+import { CATEGORIES, CUSTOMERS, PRODUCTS, SETTINGS, makeDemoOrders } from '../data/seed'
 import * as db from '../lib/storage'
 import { effectivePrice, uid } from '../lib/format'
 import { findZone } from '../lib/shipping'
@@ -89,6 +89,14 @@ export function StoreProvider({ children }) {
   // CEP informado pelo cliente: guia todo o cálculo de frete.
   const [cep, setCep] = useState(() => db.read(db.KEYS.cep, ''))
 
+  // Contas de clientes e quem está com sessão aberta neste navegador.
+  const [customers, setCustomers] = useState(
+    () => db.read(db.KEYS.customers, null) ?? CUSTOMERS,
+  )
+  const [customerId, setCustomerId] = useState(() =>
+    db.read(db.KEYS.customerSession, null),
+  )
+
   const [isAdmin, setIsAdmin] = useState(() => db.read(db.KEYS.session, false) === true)
   const [cartOpen, setCartOpen] = useState(false)
   const [toasts, setToasts] = useState([])
@@ -102,6 +110,8 @@ export function StoreProvider({ children }) {
   useEffect(() => void db.write(db.KEYS.cart, cart), [cart])
   useEffect(() => void db.write(db.KEYS.session, isAdmin), [isAdmin])
   useEffect(() => void db.write(db.KEYS.cep, cep), [cep])
+  useEffect(() => void db.write(db.KEYS.customers, customers), [customers])
+  useEffect(() => void db.write(db.KEYS.customerSession, customerId), [customerId])
 
   /* ---- Tema ---- */
   useEffect(() => {
@@ -174,6 +184,165 @@ export function StoreProvider({ children }) {
 
   const total = subtotal + (shipping ?? 0)
 
+  /* ------------------------------------------------------------------------ */
+  /* Contas de clientes                                                        */
+  /*                                                                           */
+  /* Autenticação conferida no próprio navegador, como no acesso do painel.    */
+  /* Serve para a loja funcionar sem servidor; não protege nada de verdade.    */
+  /* ------------------------------------------------------------------------ */
+
+  const currentCustomer = useMemo(
+    () => customers.find((c) => c.id === customerId) ?? null,
+    [customers, customerId],
+  )
+
+  /** Pedidos da conta aberta, do mais recente para o mais antigo. */
+  const customerOrders = useMemo(() => {
+    if (!currentCustomer) return []
+    return orders
+      .filter((o) => o.customerId === currentCustomer.id)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  }, [orders, currentCustomer])
+
+  const defaultAddress = useMemo(() => {
+    const list = currentCustomer?.addresses ?? []
+    return list.find((a) => a.isDefault) ?? list[0] ?? null
+  }, [currentCustomer])
+
+  const findByEmail = useCallback(
+    (email) =>
+      customers.find(
+        (c) => c.email.trim().toLowerCase() === String(email).trim().toLowerCase(),
+      ) ?? null,
+    [customers],
+  )
+
+  const signup = useCallback(
+    ({ name, email, phone, password }) => {
+      if (findByEmail(email)) {
+        return { ok: false, error: 'Já existe uma conta com este e-mail.' }
+      }
+      const account = {
+        id: uid('cus'),
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        passHash: db.hash(password),
+        createdAt: new Date().toISOString(),
+        addresses: [],
+      }
+      setCustomers((list) => [...list, account])
+      setCustomerId(account.id)
+      return { ok: true, account }
+    },
+    [findByEmail],
+  )
+
+  const loginCustomer = useCallback(
+    (email, password) => {
+      const account = findByEmail(email)
+      if (!account) return { ok: false, error: 'Não encontramos uma conta com este e-mail.' }
+
+      const expected = account.passHash ?? db.hash('cliente123')
+      if (db.hash(password) !== expected) {
+        return { ok: false, error: 'Senha incorreta.' }
+      }
+      setCustomerId(account.id)
+      return { ok: true, account }
+    },
+    [findByEmail],
+  )
+
+  const logoutCustomer = useCallback(() => setCustomerId(null), [])
+
+  const updateCustomer = useCallback(
+    (data) => {
+      if (!customerId) return
+      setCustomers((list) =>
+        list.map((c) => (c.id === customerId ? { ...c, ...data } : c)),
+      )
+    },
+    [customerId],
+  )
+
+  const changeCustomerPassword = useCallback(
+    (current, next) => {
+      if (!currentCustomer) return false
+      const expected = currentCustomer.passHash ?? db.hash('cliente123')
+      if (db.hash(current) !== expected) return false
+      updateCustomer({ passHash: db.hash(next) })
+      return true
+    },
+    [currentCustomer, updateCustomer],
+  )
+
+  /** Cria ou atualiza um endereço da conta aberta. */
+  const saveAddress = useCallback(
+    (addr) => {
+      if (!customerId) return null
+      const id = addr.id || uid('addr')
+
+      setCustomers((list) =>
+        list.map((c) => {
+          if (c.id !== customerId) return c
+          const existing = c.addresses ?? []
+          const isFirst = existing.length === 0
+          const next = { ...addr, id, isDefault: addr.isDefault || isFirst }
+
+          const merged = existing.some((a) => a.id === id)
+            ? existing.map((a) => (a.id === id ? next : a))
+            : [...existing, next]
+
+          // Só um endereço pode ser o padrão.
+          return {
+            ...c,
+            addresses: next.isDefault
+              ? merged.map((a) => ({ ...a, isDefault: a.id === id }))
+              : merged,
+          }
+        }),
+      )
+      return id
+    },
+    [customerId],
+  )
+
+  const deleteAddress = useCallback(
+    (addressId) => {
+      if (!customerId) return
+      setCustomers((list) =>
+        list.map((c) => {
+          if (c.id !== customerId) return c
+          const rest = (c.addresses ?? []).filter((a) => a.id !== addressId)
+          // Se o padrão saiu, o primeiro que sobrar assume.
+          if (rest.length && !rest.some((a) => a.isDefault)) rest[0].isDefault = true
+          return { ...c, addresses: rest }
+        }),
+      )
+    },
+    [customerId],
+  )
+
+  const setDefaultAddress = useCallback(
+    (addressId) => {
+      if (!customerId) return
+      setCustomers((list) =>
+        list.map((c) =>
+          c.id === customerId
+            ? {
+                ...c,
+                addresses: (c.addresses ?? []).map((a) => ({
+                  ...a,
+                  isDefault: a.id === addressId,
+                })),
+              }
+            : c,
+        ),
+      )
+    },
+    [customerId],
+  )
+
   /* ---- Ações do carrinho ---- */
   const addToCart = useCallback(
     (product, qty = 1) => {
@@ -237,6 +406,8 @@ export function StoreProvider({ children }) {
         createdAt: now,
         updatedAt: now,
         status: 'pendente',
+        // Vazio quando a compra é feita sem cadastro — o que segue permitido.
+        customerId: currentCustomer?.id ?? null,
         customer: {
           name: form.name,
           phone: form.phone,
@@ -279,10 +450,29 @@ export function StoreProvider({ children }) {
         }),
       )
 
+      // Guarda o endereço na conta quando o cliente pede.
+      if (currentCustomer && form.saveAddress && !isPickup) {
+        saveAddress({
+          id: form.addressId || '',
+          label: form.addressLabel?.trim() || 'Endereço',
+          cep: form.cep,
+          address: form.address,
+          number: form.number,
+          complement: form.complement,
+          district: form.district,
+          city: form.city,
+          state: form.state,
+          isDefault: false,
+        })
+      }
+
       clearCart()
       return order
     },
-    [cartLines, subtotal, freeShipping, zones, settings.orderSeq, clearCart],
+    [
+      cartLines, subtotal, freeShipping, zones, settings.orderSeq, clearCart,
+      currentCustomer, saveAddress,
+    ],
   )
 
   const updateOrderStatus = useCallback((orderId, status) => {
@@ -394,6 +584,8 @@ export function StoreProvider({ children }) {
     setProducts(PRODUCTS)
     setCategories(CATEGORIES)
     setOrders(makeDemoOrders())
+    setCustomers(CUSTOMERS)
+    setCustomerId(null)
     setSettings({ ...SETTINGS, adminPassHash: settings.adminPassHash })
     clearCart()
   }, [settings.adminPassHash, clearCart])
@@ -403,6 +595,7 @@ export function StoreProvider({ children }) {
     if (Array.isArray(data.products)) setProducts(data.products)
     if (Array.isArray(data.categories)) setCategories(data.categories)
     if (Array.isArray(data.orders)) setOrders(data.orders)
+    if (Array.isArray(data.customers)) setCustomers(data.customers)
     if (data.settings) setSettings((s) => ({ ...s, ...data.settings }))
   }, [])
 
@@ -415,6 +608,19 @@ export function StoreProvider({ children }) {
       settings,
       productById,
       categoryById,
+      // contas
+      customers,
+      currentCustomer,
+      customerOrders,
+      defaultAddress,
+      signup,
+      loginCustomer,
+      logoutCustomer,
+      updateCustomer,
+      changeCustomerPassword,
+      saveAddress,
+      deleteAddress,
+      setDefaultAddress,
       // carrinho
       cart,
       cartLines,
@@ -462,6 +668,9 @@ export function StoreProvider({ children }) {
     }),
     [
       products, categories, orders, settings, productById, categoryById,
+      customers, currentCustomer, customerOrders, defaultAddress,
+      signup, loginCustomer, logoutCustomer, updateCustomer,
+      changeCustomerPassword, saveAddress, deleteAddress, setDefaultAddress,
       cart, cartLines, cartCount, subtotal, shipping, total, freeShipping,
       cep, zone, outOfRange, saveZone, deleteZone, toggleZone,
       addToCart, setQty, removeFromCart, clearCart, cartOpen,

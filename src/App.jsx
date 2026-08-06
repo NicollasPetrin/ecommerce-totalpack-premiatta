@@ -12,6 +12,8 @@ import Catalog from './pages/Catalog'
 import Product from './pages/Product'
 import Checkout from './pages/Checkout'
 import OrderSuccess from './pages/OrderSuccess'
+import Auth from './pages/Auth'
+import Account from './pages/Account'
 import NotFound from './pages/NotFound'
 
 import AdminLayout from './pages/admin/AdminLayout'
@@ -20,6 +22,7 @@ import Dashboard from './pages/admin/Dashboard'
 import AdminProducts from './pages/admin/Products'
 import AdminCategories from './pages/admin/Categories'
 import AdminOrders from './pages/admin/Orders'
+import AdminCustomers from './pages/admin/Customers'
 import AdminShipping from './pages/admin/Shipping'
 import AdminSettings from './pages/admin/Settings'
 
@@ -37,12 +40,15 @@ const TITLES = [
   [/^\/admin\/produtos$/, 'Produtos — Painel'],
   [/^\/admin\/categorias$/, 'Categorias — Painel'],
   [/^\/admin\/pedidos$/, 'Pedidos — Painel'],
+  [/^\/admin\/clientes$/, 'Clientes — Painel'],
   [/^\/admin\/entrega$/, 'Entrega — Painel'],
   [/^\/admin\/configuracoes$/, 'Configurações — Painel'],
   [/^\/admin$/, 'Visão geral — Painel'],
   [/^\/catalogo/, 'Catálogo'],
   [/^\/produto\//, 'Produto'],
   [/^\/checkout$/, 'Finalizar pedido'],
+  [/^\/entrar$/, 'Entrar'],
+  [/^\/conta$/, 'Minha conta'],
   [/^\/pedido\//, 'Pedido confirmado'],
 ]
 
@@ -96,6 +102,8 @@ export default function App() {
           <Route path="produto/:id" element={<Product />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="pedido/:id" element={<OrderSuccess />} />
+          <Route path="entrar" element={<Auth />} />
+          <Route path="conta" element={<Account />} />
         </Route>
 
         {/* Painel */}
@@ -106,6 +114,7 @@ export default function App() {
             <Route path="produtos" element={<AdminProducts />} />
             <Route path="categorias" element={<AdminCategories />} />
             <Route path="pedidos" element={<AdminOrders />} />
+            <Route path="clientes" element={<AdminCustomers />} />
             <Route path="entrega" element={<AdminShipping />} />
             <Route path="configuracoes" element={<AdminSettings />} />
           </Route>
