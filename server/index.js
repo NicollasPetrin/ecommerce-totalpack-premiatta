@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 import express from 'express'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
@@ -44,7 +47,34 @@ app.use('/api/orders', orderRoutes)
 app.use('/api', catalogRoutes)
 app.use('/api', storeRoutes)
 
+// Precisa vir antes dos arquivos estáticos: uma rota /api inexistente é erro
+// de API, não um endereço da loja para o React resolver.
 app.use('/api', (_req, _res, next) => next(notFound('Rota não encontrada.')))
+
+/**
+ * Em produção o Express também entrega o site. No desenvolvimento quem serve
+ * o front é o Vite, então este bloco fica inativo enquanto `dist/` não existe.
+ */
+const distDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist')
+
+if (existsSync(distDir)) {
+  // Os arquivos com hash no nome nunca mudam de conteúdo; o index.html sim.
+  app.use(
+    express.static(distDir, {
+      maxAge: '1y',
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache')
+      },
+    }),
+  )
+
+  // Endereços como /catalogo ou /admin existem só no roteador do React:
+  // qualquer caminho não encontrado devolve o index.html.
+  app.get('*', (_req, res) => res.sendFile(join(distDir, 'index.html')))
+} else if (config.isProduction) {
+  console.warn('[api] dist/ não encontrado — rode `npm run build` antes de `npm start`.')
+}
+
 app.use(errorHandler)
 
 const server = app.listen(config.port, () => {
