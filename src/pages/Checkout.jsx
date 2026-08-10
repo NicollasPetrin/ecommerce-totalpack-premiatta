@@ -176,6 +176,20 @@ export default function Checkout() {
     setSending(true)
     try {
       const order = await placeOrder(form)
+
+      /**
+       * Com processadora ligada, o cliente vai direto para a página de
+       * pagamento — sem uma tela intermediária pedindo mais um clique.
+       *
+       * `replace` em vez de `href`: assim o botão "voltar" do navegador não
+       * traz o cliente de volta ao checkout, o que geraria um segundo pedido.
+       * Ele volta à confirmação pelo retorno automático do Asaas.
+       */
+      if (order.charge?.checkoutUrl) {
+        window.location.replace(order.charge.checkoutUrl)
+        return
+      }
+
       navigate(`/pedido/${order.id}`, { replace: true })
     } catch (err) {
       // O servidor pode recusar por estoque, CEP ou campo inválido.

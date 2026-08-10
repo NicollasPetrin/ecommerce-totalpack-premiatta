@@ -109,7 +109,7 @@ function dueDate(days) {
 export const asaas = {
   id: 'asaas',
 
-  async createCharge({ order, customer, method, amount }) {
+  async createCharge({ order, customer, method, amount, returnUrl }) {
     const asaasCustomerId = await resolveCustomer({
       name: order.customer.name,
       email: order.customer.email,
@@ -117,19 +117,44 @@ export const asaas = {
       cpfCnpj: customer?.cpfCnpj ?? order.customer.cpfCnpj,
     })
 
-    const payment = await call('/payments', {
-      method: 'POST',
-      body: JSON.stringify({
-        customer: asaasCustomerId,
-        billingType: BILLING_TYPE[method] ?? 'UNDEFINED',
-        value: Number(amount),
-        dueDate: dueDate(config.asaasDueDays),
-        // Liga a cobrança ao nosso pedido — aparece no painel do Asaas e
-        // volta nos webhooks, útil para conciliar.
-        externalReference: order.id,
-        description: `Pedido #${order.seq} — ${config.storeLabel}`,
-      }),
-    })
+    const corpo = {
+      customer: asaasCustomerId,
+      billingType: BILLING_TYPE[method] ?? 'UNDEFINED',
+      value: Number(amount),
+      dueDate: dueDate(config.asaasDueDays),
+      // Liga a cobrança ao nosso pedido — aparece no painel do Asaas e
+      // volta nos webhooks, útil para conciliar.
+      externalReference: order.id,
+      description: `Pedido #${order.seq} — ${config.storeLabel}`,
+    }
+
+    /**
+     * O retorno automático leva o cliente de volta à confirmação do pedido
+     * depois de pagar. O Asaas só aceita se o domínio de destino estiver
+     * cadastrado na conta (Minha Conta › Informações) — é a proteção deles
+     * contra redirecionar o pagador para um site qualquer.
+     *
+     * Quando não estiver cadastrado, criamos a cobrança sem o retorno em vez
+     * de deixar a venda cair: o cliente paga do mesmo jeito, só não volta
+     * sozinho.
+     */
+    let payment
+    try {
+      payment = await call('/payments', {
+        method: 'POST',
+        body: JSON.stringify(
+          returnUrl ? { ...corpo, callback: { successUrl: returnUrl, autoRedirect: true } } : corpo,
+        ),
+      })
+    } catch (err) {
+      if (!returnUrl || !/dom[íi]nio/i.test(err.message)) throw err
+
+      console.warn(
+        '[asaas] retorno automático desligado: cadastre o domínio da loja em\n' +
+          '        Minha Conta › Informações para o cliente voltar sozinho após pagar.',
+      )
+      payment = await call('/payments', { method: 'POST', body: JSON.stringify(corpo) })
+    }
 
     return {
       providerRef: payment.id,
