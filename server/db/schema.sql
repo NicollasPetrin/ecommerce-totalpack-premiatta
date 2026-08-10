@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS customers (
   name          TEXT NOT NULL,
   email         TEXT NOT NULL UNIQUE,
   phone         TEXT NOT NULL DEFAULT '',
+  -- Guardado para o cliente cadastrado não redigitar a cada compra.
+  doc           TEXT NOT NULL DEFAULT '',
   password_hash TEXT NOT NULL,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -149,6 +151,9 @@ CREATE TABLE IF NOT EXISTS orders (
   customer_name  TEXT NOT NULL,
   customer_email TEXT NOT NULL DEFAULT '',
   customer_phone TEXT NOT NULL,
+  -- Só dígitos. Exigido pela processadora para emitir a cobrança; pedidos
+  -- antigos, anteriores à integração, ficam com string vazia.
+  customer_doc   TEXT NOT NULL DEFAULT '',
 
   delivery       delivery_mode NOT NULL DEFAULT 'entrega',
   delivery_zone  TEXT NOT NULL DEFAULT '',
@@ -288,6 +293,16 @@ CREATE TABLE IF NOT EXISTS settings (
   low_stock_threshold INTEGER NOT NULL DEFAULT 20,
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- -----------------------------------------------------------------------------
+-- Colunas acrescentadas depois
+--
+-- `CREATE TABLE IF NOT EXISTS` não altera tabela que já existe, então colunas
+-- novas precisam vir aqui para alcançar bancos criados antes desta versão.
+-- -----------------------------------------------------------------------------
+
+ALTER TABLE orders    ADD COLUMN IF NOT EXISTS customer_doc TEXT NOT NULL DEFAULT '';
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS doc          TEXT NOT NULL DEFAULT '';
 
 -- -----------------------------------------------------------------------------
 -- updated_at automático

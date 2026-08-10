@@ -63,6 +63,27 @@ export function maskPhone(value) {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
+/**
+ * Máscara de CPF/CNPJ, decidida pela quantidade de dígitos:
+ * 123.456.789-01 até 11, 12.345.678/0001-90 a partir daí.
+ */
+export function maskDoc(value) {
+  const d = String(value).replace(/\D/g, '').slice(0, 14)
+
+  if (d.length <= 11) {
+    return d
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  }
+
+  return d
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+}
+
 /** Máscara de CEP: 01234-567 */
 export function maskCep(value) {
   const d = String(value).replace(/\D/g, '').slice(0, 8)

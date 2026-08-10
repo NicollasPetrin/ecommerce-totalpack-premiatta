@@ -151,7 +151,44 @@ server/routes/webhooks.js   recebe as notificações
 Tabelas: `payments` (uma linha por tentativa de cobrança) e `webhook_events`
 (toda notificação recebida, com chave única por evento).
 
-### Para integrar uma processadora
+### Asaas — ambiente de teste
+
+O adaptador do Asaas está pronto (`server/lib/payments/asaas.js`) e usa o
+**checkout hospedado** deles: a cobrança é criada pela API e o cliente é levado
+para a página do Asaas, onde escolhe entre PIX, boleto e cartão. Nenhum dado de
+cartão passa por este servidor.
+
+Para testar no sandbox, no `.env` local:
+
+```
+PAYMENT_PROVIDER=asaas
+PAYMENT_SECRET_KEY=<chave de sandbox, começa com $aact_hmlg_>
+PAYMENT_WEBHOOK_SECRET=<um token que você inventa>
+ASAAS_BASE_URL=https://api-sandbox.asaas.com/v3
+PUBLIC_URL=http://localhost:5173
+```
+
+A chave de sandbox sai do painel do Asaas em modo sandbox
+(`sandbox.asaas.com`) → Integrações → API. É uma chave diferente da de
+produção e não movimenta dinheiro.
+
+**Para o webhook chegar na sua máquina** durante o teste, o Asaas precisa
+alcançar `localhost` — o que ele não consegue. Use um túnel:
+
+```bash
+npx localtunnel --port 3333
+```
+
+Cadastre a URL que ele devolver + `/api/webhooks/payments/asaas` no painel do
+Asaas, em Integrações → Webhooks, com o mesmo token do
+`PAYMENT_WEBHOOK_SECRET`. Marque os eventos de cobrança (`PAYMENT_CONFIRMED`,
+`PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED`).
+
+**Uma trava proposital:** o servidor recusa subir se a chave for de produção e
+a API apontar para sandbox, ou o contrário. É o erro mais caro possível nessa
+integração — cobrar de verdade achando que está testando.
+
+### Para integrar outra processadora
 
 1. Crie `server/lib/payments/<nome>.js` implementando `createCharge`,
    `verifySignature` e `parseEvent` — o contrato está documentado em

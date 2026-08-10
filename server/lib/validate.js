@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { badRequest } from './http.js'
+import { isValidDocument, onlyDigits } from './document.js'
 
 /** Valida o corpo da requisição e devolve o objeto já tipado. */
 export function parse(schema, data) {
@@ -20,6 +21,12 @@ const cep = z
   .refine((v) => v.length === 8, 'CEP deve ter 8 dígitos.')
 
 const money = z.coerce.number().nonnegative('Valor não pode ser negativo.')
+
+/** CPF ou CNPJ com dígito verificador conferido. */
+const documento = z
+  .string()
+  .transform(onlyDigits)
+  .refine(isValidDocument, 'CPF ou CNPJ inválido.')
 
 export const schemas = {
   signup: z.object({
@@ -127,6 +134,8 @@ export const schemas = {
       name: z.string().trim().min(3, 'Informe o nome completo.'),
       email: z.string().trim().toLowerCase().email('E-mail inválido.').or(z.literal('')),
       phone: z.string().trim().min(10, 'Telefone incompleto.'),
+      // Exigido pela processadora para emitir a cobrança.
+      cpfCnpj: documento,
       // A loja deixou de oferecer retirada. O valor 'retirada' continua no
       // banco por causa dos pedidos antigos, mas não é aceito em novos.
       delivery: z.literal('entrega').default('entrega'),

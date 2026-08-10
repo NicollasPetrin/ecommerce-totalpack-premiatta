@@ -276,6 +276,7 @@ export function StoreProvider({ children }) {
         name: form.name,
         email: form.email ?? '',
         phone: form.phone,
+        cpfCnpj: form.cpfCnpj ?? '',
         delivery: form.delivery,
         payment: form.payment,
         note: form.note ?? '',

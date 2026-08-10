@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import { PAYMENT_LABEL } from '../store/StoreContext'
-import { maskCep, maskPhone, money } from '../lib/format'
+import { maskCep, maskDoc, maskPhone, money } from '../lib/format'
 import { formatCep, zoneDeadline } from '../lib/shipping'
 import ProductArt from '../components/ProductArt'
 import Icon from '../components/Icon'
@@ -11,6 +11,7 @@ const EMPTY = {
   name: '',
   phone: '',
   email: '',
+  cpfCnpj: '',
   cep: '',
   address: '',
   number: '',
@@ -48,6 +49,7 @@ export default function Checkout() {
       name: currentCustomer.name,
       phone: currentCustomer.phone,
       email: currentCustomer.email,
+      cpfCnpj: maskDoc(currentCustomer.cpfCnpj ?? ''),
       ...(defaultAddress
         ? {
             addressId: defaultAddress.id,
@@ -122,6 +124,7 @@ export default function Checkout() {
   const set = (key) => (e) => {
     let v = e.target.value
     if (key === 'phone') v = maskPhone(v)
+    if (key === 'cpfCnpj') v = maskDoc(v)
     if (key === 'state') v = v.toUpperCase().slice(0, 2)
     if (key === 'cep') {
       v = maskCep(v)
@@ -138,6 +141,13 @@ export default function Checkout() {
     if (form.phone.replace(/\D/g, '').length < 10) e.phone = 'Telefone incompleto.'
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       e.email = 'E-mail inválido.'
+
+    // Comprimento só; o dígito verificador é conferido no servidor, que
+    // devolve o erro no campo se não bater.
+    const doc = form.cpfCnpj.replace(/\D/g, '')
+    if (doc.length !== 11 && doc.length !== 14) {
+      e.cpfCnpj = 'Informe um CPF (11 dígitos) ou CNPJ (14).'
+    }
 
     if (form.cep.replace(/\D/g, '').length !== 8) e.cep = 'CEP incompleto.'
     else if (outOfRange) e.cep = 'Ainda não entregamos neste CEP.'
@@ -264,6 +274,23 @@ export default function Checkout() {
                   placeholder="maria@email.com"
                 />
                 {errors.email && <span className="err">{errors.email}</span>}
+              </div>
+
+              <div className={`field col-2${errors.cpfCnpj ? ' has-error' : ''}`}>
+                <label htmlFor="ck-doc">CPF ou CNPJ *</label>
+                <input
+                  id="ck-doc"
+                  className="input"
+                  value={form.cpfCnpj}
+                  onChange={set('cpfCnpj')}
+                  inputMode="numeric"
+                  placeholder="123.456.789-01"
+                />
+                {errors.cpfCnpj ? (
+                  <span className="err">{errors.cpfCnpj}</span>
+                ) : (
+                  <span className="hint">Necessário para emitir a cobrança.</span>
+                )}
               </div>
             </div>
           </section>

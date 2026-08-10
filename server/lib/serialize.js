@@ -51,6 +51,7 @@ export const customer = (r) => ({
   name: r.name,
   email: r.email,
   phone: r.phone,
+  cpfCnpj: r.doc ?? '',
   createdAt: r.created_at,
   addresses: (r.addresses ?? []).map(address),
 })
@@ -94,6 +95,7 @@ export const order = (r) => ({
     name: r.customer_name,
     email: r.customer_email,
     phone: r.customer_phone,
+    cpfCnpj: r.customer_doc ?? '',
     cep: r.cep,
     address: r.street,
     number: r.number,

@@ -102,14 +102,14 @@ orderRoutes.post(
 
       const { rows: created } = await client.query(
         `INSERT INTO orders (
-           customer_id, customer_name, customer_email, customer_phone,
+           customer_id, customer_name, customer_email, customer_phone, customer_doc,
            delivery, delivery_zone, delivery_days,
            cep, street, number, complement, district, city, state,
            payment, note, subtotal, shipping, total)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
          RETURNING *`,
         [
-          customerId, d.name, d.email, d.phone,
+          customerId, d.name, d.email, d.phone, d.cpfCnpj,
           'entrega', zone.name, zone.days,
           normalizeCep(d.cep), d.street, d.number, d.complement,
           d.district, d.city, d.state,
@@ -131,6 +131,15 @@ orderRoutes.post(
           line.qty,
           line.product.id,
         ])
+      }
+
+      // O documento fica guardado na conta para não ser redigitado na próxima
+      // compra. Só grava se ainda não houver um.
+      if (customerId) {
+        await client.query(
+          `UPDATE customers SET doc = $1 WHERE id = $2 AND coalesce(doc, '') = ''`,
+          [d.cpfCnpj, customerId],
+        )
       }
 
       // Guarda o endereço na conta, se o cliente pediu.

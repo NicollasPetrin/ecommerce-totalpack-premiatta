@@ -35,6 +35,46 @@ export const config = {
   paymentWebhookSecret: process.env.PAYMENT_WEBHOOK_SECRET ?? '',
   /** Base pública da loja, para montar as URLs de retorno e de webhook. */
   publicUrl: (process.env.PUBLIC_URL ?? 'http://localhost:5173').replace(/\/+$/, ''),
+
+  /* ---- Asaas ----
+     O endereço da API muda entre sandbox e produção, e já mudou de forma ao
+     longo do tempo — por isso é configurável em vez de fixo no código.
+     Confira o valor atual na documentação antes de apontar para produção. */
+  asaasBaseUrl: (
+    process.env.ASAAS_BASE_URL ?? 'https://api-sandbox.asaas.com/v3'
+  ).replace(/\/+$/, ''),
+  /** Dias até o vencimento do boleto/PIX gerado. */
+  asaasDueDays: Number(process.env.ASAAS_DUE_DAYS ?? 3),
+
+  /** Nome usado na descrição da cobrança que o cliente vê. */
+  storeLabel: process.env.STORE_LABEL ?? 'TotalPack',
+}
+
+/**
+ * Guarda contra o acidente mais caro possível: apontar para a API de produção
+ * do Asaas com uma chave de sandbox, ou o contrário. As chaves têm prefixos
+ * diferentes, então dá para conferir.
+ */
+if (config.paymentProvider === 'asaas' && config.paymentSecretKey) {
+  const chaveDeProducao = config.paymentSecretKey.includes('_prod_')
+  const apiDeProducao = !config.asaasBaseUrl.includes('sandbox')
+
+  if (chaveDeProducao !== apiDeProducao) {
+    console.error(
+      '\n[config] Chave do Asaas e endereço da API não combinam:\n' +
+        `         chave: ${chaveDeProducao ? 'produção' : 'sandbox'}\n` +
+        `         API:   ${config.asaasBaseUrl}\n` +
+        '         Ajuste ASAAS_BASE_URL ou PAYMENT_SECRET_KEY.\n',
+    )
+    process.exit(1)
+  }
+
+  if (chaveDeProducao && !isProduction) {
+    console.warn(
+      '\n[config] ATENÇÃO: chave de PRODUÇÃO do Asaas fora do ambiente de\n' +
+        '         produção. Cobranças criadas aqui são reais.\n',
+    )
+  }
 }
 
 if (config.paymentProvider !== 'manual' && !config.paymentSecretKey) {

@@ -1,5 +1,6 @@
 import { config } from '../../config.js'
 import { manual } from './manual.js'
+import { asaas } from './asaas.js'
 
 /**
  * Camada de pagamento.
@@ -49,6 +50,7 @@ import { manual } from './manual.js'
 /** Adaptadores disponíveis. Novos entram aqui. */
 const providers = {
   manual,
+  asaas,
 }
 
 export function getProvider(id = config.paymentProvider) {
