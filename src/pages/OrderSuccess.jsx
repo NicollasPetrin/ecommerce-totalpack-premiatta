@@ -230,25 +230,26 @@ export default function OrderSuccess() {
             </div>
           )}
 
-          {order.payment === 'cartao' && (
+          {/* Com link na tela, o texto muda: o cliente paga agora, não depois. */}
+          {order.charge?.checkoutUrl && order.charge.status !== 'pago' ? (
             <div className="paynote">
               <Icon name="shield" size={18} />
               <p>
-                Vamos enviar um <strong>link de pagamento seguro</strong> para o e-mail
-                ou telefone informados. Os dados do cartão são digitados na página da
-                operadora — nunca aqui.
+                Use o botão <strong>Pagar agora</strong> acima. A página é da operadora
+                de pagamento — os dados do cartão são digitados lá, nunca aqui. O pedido
+                é separado assim que o pagamento for confirmado.
               </p>
             </div>
-          )}
-
-          {order.payment === 'boleto' && (
-            <div className="paynote">
-              <Icon name="receipt" size={18} />
-              <p>
-                O boleto será enviado para o e-mail ou telefone informados. O pedido é
-                separado assim que o pagamento for compensado.
-              </p>
-            </div>
+          ) : (
+            order.charge?.status !== 'pago' && (
+              <div className="paynote">
+                <Icon name="receipt" size={18} />
+                <p>
+                  Vamos entrar em contato pelo telefone ou e-mail informados para
+                  combinar o pagamento.
+                </p>
+              </div>
+            )
           )}
         </section>
       </div>

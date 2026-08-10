@@ -15,7 +15,8 @@
     "db:seed": "node server/db/seed.js",
     "db:reset": "node server/db/reset.js",
     "db:setup": "npm run db:migrate && npm run db:seed",
-    "reset-admin": "node server/db/reset-admin.js"
+    "reset-admin": "node server/db/reset-admin.js",
+    "asaas:check": "node server/tools/check-asaas.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
