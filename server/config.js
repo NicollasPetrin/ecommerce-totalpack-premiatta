@@ -57,9 +57,14 @@ export const config = {
  */
 if (config.paymentProvider === 'asaas' && config.paymentSecretKey) {
   const chaveDeProducao = config.paymentSecretKey.includes('_prod_')
-  const apiDeProducao = !config.asaasBaseUrl.includes('sandbox')
 
-  if (chaveDeProducao !== apiDeProducao) {
+  // A conferência só vale para endereços reais do Asaas. Um servidor local
+  // (teste automatizado, mock) não é nem produção nem sandbox — opinar sobre
+  // ele só atrapalharia, e não é dali que sai cobrança de verdade.
+  const ehAsaas = /(^|\.)asaas\.com/.test(config.asaasBaseUrl)
+  const apiDeProducao = ehAsaas && !config.asaasBaseUrl.includes('sandbox')
+
+  if (ehAsaas && chaveDeProducao !== apiDeProducao) {
     console.error(
       '\n[config] Chave do Asaas e endereço da API não combinam:\n' +
         `         chave: ${chaveDeProducao ? 'produção' : 'sandbox'}\n` +
@@ -69,7 +74,7 @@ if (config.paymentProvider === 'asaas' && config.paymentSecretKey) {
     process.exit(1)
   }
 
-  if (chaveDeProducao && !isProduction) {
+  if (chaveDeProducao && ehAsaas && !isProduction) {
     console.warn(
       '\n[config] ATENÇÃO: chave de PRODUÇÃO do Asaas fora do ambiente de\n' +
         '         produção. Cobranças criadas aqui são reais.\n',

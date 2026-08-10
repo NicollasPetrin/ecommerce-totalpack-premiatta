@@ -4,7 +4,8 @@ import { wrap, badRequest, notFound, conflict } from '../lib/http.js'
 import { parse, schemas } from '../lib/validate.js'
 import { requireAdmin } from '../lib/auth.js'
 import { findZone, normalizeCep } from '../lib/shipping.js'
-import { createCharge } from '../lib/payments/service.js'
+import { createCharge, latestPayment, syncCharge } from '../lib/payments/service.js'
+import { restoreStock } from '../lib/stock.js'
 import * as s from '../lib/serialize.js'
 
 export const orderRoutes = Router()
@@ -234,10 +235,20 @@ orderRoutes.put(
   requireAdmin,
   wrap(async (req, res) => {
     const { status } = parse(schemas.orderStatus, req.body)
-    const row = await one(`UPDATE orders SET status = $1 WHERE id = $2 RETURNING *`, [
-      status,
-      req.params.id,
-    ])
+
+    const row = await transaction(async (client) => {
+      const { rows } = await client.query(
+        `UPDATE orders SET status = $1 WHERE id = $2 RETURNING *`,
+        [status, req.params.id],
+      )
+      if (!rows.length) return null
+
+      // Cancelou: a mercadoria volta para a prateleira.
+      if (status === 'cancelado') await restoreStock(client, req.params.id)
+
+      return rows[0]
+    })
+
     if (!row) throw notFound('Pedido não encontrado.')
     const [order] = await withItems([row])
     res.json({ order })
@@ -264,6 +275,34 @@ orderRoutes.post(
     const payment = await createCharge({ order, customer: order.customer })
 
     res.status(201).json({ payment: s.payment(payment) })
+  }),
+)
+
+/**
+ * Confere o pagamento direto na processadora.
+ *
+ * Acessível ao dono do pedido, não só ao admin: se o webhook se perdeu, o
+ * cliente que acabou de pagar consegue atualizar a própria tela em vez de
+ * ficar olhando "aguardando pagamento".
+ */
+orderRoutes.post(
+  '/:id/sync-payment',
+  wrap(async (req, res) => {
+    const row = await one(`SELECT * FROM orders WHERE id = $1`, [req.params.id])
+    if (!row) throw notFound('Pedido não encontrado.')
+
+    const isOwner = req.user?.role === 'customer' && row.customer_id === req.user.sub
+    const isAdmin = req.user?.role === 'admin'
+    const isGuestOrder = row.customer_id === null
+    if (!isOwner && !isAdmin && !isGuestOrder) throw notFound('Pedido não encontrado.')
+
+    const payment = await latestPayment(row.id)
+    if (!payment) throw notFound('Este pedido não tem cobrança registrada.')
+
+    const resultado = await syncCharge(payment)
+    const [order] = await withItems([await one(`SELECT * FROM orders WHERE id = $1`, [row.id])])
+
+    res.json({ order, resultado })
   }),
 )
 

@@ -1,5 +1,6 @@
 import { one, transaction } from '../../db/pool.js'
 import { getProvider } from './index.js'
+import { restoreStock } from '../stock.js'
 import { config } from '../../config.js'
 
 /**
@@ -55,6 +56,40 @@ export async function createCharge({ order, customer }) {
   return row
 }
 
+/**
+ * Pergunta à processadora qual é o estado atual de uma cobrança e aplica o
+ * resultado.
+ *
+ * Webhook não é garantia: a notificação pode se perder, chegar quando o
+ * servidor estava reiniciando, ou ser recusada por um segredo mal configurado.
+ * Sem esta conferência, um pedido pago ficaria "aguardando pagamento" para
+ * sempre e alguém teria que corrigir na mão.
+ */
+export async function syncCharge(payment) {
+  const provider = getProvider(payment.provider)
+
+  if (!provider.fetchCharge || !payment.provider_ref) {
+    return { synced: false, reason: 'processadora não permite consulta' }
+  }
+
+  const atual = await provider.fetchCharge(payment.provider_ref)
+  if (!atual) return { synced: false, reason: 'cobrança não encontrada na processadora' }
+
+  if (atual.status === payment.status) {
+    return { synced: true, changed: false, status: atual.status }
+  }
+
+  const resultado = await applyPaymentEvent({
+    provider: payment.provider,
+    providerRef: payment.provider_ref,
+    status: atual.status,
+    paidAt: atual.paidAt,
+    payload: { origem: 'consulta manual', ...atual.raw },
+  })
+
+  return { synced: true, changed: resultado.applied, status: atual.status }
+}
+
 /** Pagamento mais recente de um pedido. */
 export const latestPayment = (orderId) =>
   one(
@@ -95,11 +130,14 @@ export async function applyPaymentEvent({ provider, providerRef, status, paidAt,
     }
 
     if (status === 'estornado') {
-      await client.query(
+      const { rows: cancelados } = await client.query(
         `UPDATE orders SET status = 'cancelado'
-          WHERE id = $1 AND status IN ('pendente', 'pago')`,
+          WHERE id = $1 AND status IN ('pendente', 'pago')
+          RETURNING id`,
         [payment.order_id],
       )
+      // Dinheiro devolvido, mercadoria volta para a prateleira.
+      if (cancelados.length) await restoreStock(client, payment.order_id)
     }
 
     return { applied: true, payment }

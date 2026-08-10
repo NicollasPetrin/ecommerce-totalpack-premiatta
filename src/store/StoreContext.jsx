@@ -313,6 +313,13 @@ export function StoreProvider({ children }) {
     setOrders((list) => list.filter((o) => o.id !== orderId))
   }, [])
 
+  /** Confere o pagamento na processadora — rede contra webhook perdido. */
+  const syncOrderPayment = useCallback(async (orderId) => {
+    const { order, resultado } = await api.post(`/orders/${orderId}/sync-payment`)
+    setOrders((list) => list.map((o) => (o.id === orderId ? order : o)))
+    return resultado
+  }, [])
+
   /** Refaz a cobrança — boleto vencido, cartão recusado, processadora fora. */
   const rechargeOrder = useCallback(async (orderId) => {
     const { payment } = await api.post(`/orders/${orderId}/charge`)
@@ -613,6 +620,7 @@ export function StoreProvider({ children }) {
       updateOrderStatus,
       deleteOrder,
       rechargeOrder,
+      syncOrderPayment,
       // admin
       isAdmin,
       login,
@@ -639,7 +647,7 @@ export function StoreProvider({ children }) {
       cart, cartLines, cartCount, subtotal, shipping, total, freeShipping,
       addToCart, setQty, removeFromCart, clearCart, cartOpen,
       cep, zone, outOfRange, saveZone, deleteZone, toggleZone,
-      placeOrder, updateOrderStatus, deleteOrder, rechargeOrder,
+      placeOrder, updateOrderStatus, deleteOrder, rechargeOrder, syncOrderPayment,
       isAdmin, login, logout, changePassword, saveProduct, deleteProduct,
       toggleProduct, saveCategory, deleteCategory, saveSettings, loadPublic,
       toast, toasts, theme,

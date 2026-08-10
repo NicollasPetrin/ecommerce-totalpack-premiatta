@@ -304,6 +304,11 @@ CREATE TABLE IF NOT EXISTS settings (
 ALTER TABLE orders    ADD COLUMN IF NOT EXISTS customer_doc TEXT NOT NULL DEFAULT '';
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS doc          TEXT NOT NULL DEFAULT '';
 
+-- Marca que o estoque deste pedido já voltou para a prateleira. Sem isto, um
+-- pedido cancelado duas vezes (ou cancelado e depois estornado) devolveria o
+-- estoque em dobro e a loja passaria a vender o que não tem.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS stock_restored BOOLEAN NOT NULL DEFAULT false;
+
 -- -----------------------------------------------------------------------------
 -- updated_at automático
 -- -----------------------------------------------------------------------------

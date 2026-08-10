@@ -14,6 +14,26 @@ export default function OrderSuccess() {
   // loja, e o servidor só devolve este se ele tiver direito de vê-lo.
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [checking, setChecking] = useState(false)
+
+  /** Pergunta à processadora se o pagamento já entrou. */
+  const conferirPagamento = async () => {
+    setChecking(true)
+    try {
+      const { order: atualizado, resultado } = await api.post(`/orders/${id}/sync-payment`)
+      setOrder(atualizado)
+      toast(
+        resultado.changed
+          ? 'Pagamento confirmado!'
+          : 'Ainda não consta pagamento. Se você acabou de pagar, aguarde alguns minutos.',
+        resultado.changed ? 'ok' : 'err',
+      )
+    } catch (err) {
+      toast(err.message, 'err')
+    } finally {
+      setChecking(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -94,6 +114,20 @@ export default function OrderSuccess() {
             Continuar comprando
           </Link>
         </div>
+
+        {/* Se o cliente já pagou e a notificação demorou, ele mesmo confere. */}
+        {order.charge &&
+          order.charge.provider !== 'manual' &&
+          order.charge.status !== 'pago' && (
+            <button
+              className="btn btn--ghost success__check-payment"
+              onClick={conferirPagamento}
+              disabled={checking}
+            >
+              <Icon name="refresh" size={16} />
+              {checking ? 'Conferindo…' : 'Já paguei — conferir agora'}
+            </button>
+          )}
       </div>
 
       <div className="success__grid">

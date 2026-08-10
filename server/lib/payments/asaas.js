@@ -149,6 +149,35 @@ export const asaas = {
   },
 
   /**
+   * Consulta o estado atual de uma cobrança.
+   *
+   * É a rede de segurança para webhook perdido: em vez de esperar uma
+   * notificação que pode nunca chegar, perguntamos direto.
+   */
+  async fetchCharge(providerRef) {
+    let payment
+    try {
+      payment = await call(`/payments/${providerRef}`)
+    } catch (err) {
+      console.error(`[asaas] consulta a ${providerRef} falhou:`, err.message)
+      return null
+    }
+
+    if (!payment?.status) return null
+
+    const status = EVENT_STATUS[`PAYMENT_${payment.status}`] ?? 'pendente'
+
+    return {
+      status,
+      paidAt:
+        status === 'pago' && (payment.paymentDate || payment.confirmedDate)
+          ? new Date(payment.paymentDate ?? payment.confirmedDate)
+          : null,
+      raw: { status: payment.status, value: payment.value, dueDate: payment.dueDate },
+    }
+  },
+
+  /**
    * O Asaas envia, em cada notificação, o token que você cadastrou junto com o
    * webhook — no cabeçalho `asaas-access-token`. Comparamos com o segredo
    * guardado no ambiente.

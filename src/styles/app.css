@@ -1698,6 +1698,10 @@
   flex-wrap: wrap;
 }
 
+.success__check-payment {
+  margin-top: 14px;
+}
+
 .success__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

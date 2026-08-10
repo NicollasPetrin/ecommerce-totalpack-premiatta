@@ -203,6 +203,24 @@ Nenhuma rota, tela ou tabela muda. O checkout passa a devolver uma URL de
 pagamento, a tela de confirmação mostra "Pagar agora", e o pedido vira `pago`
 sozinho quando o webhook chega.
 
+### Quando o webhook não chega
+
+Webhook não é garantia — a notificação se perde, chega durante um reinício, ou
+é recusada por um segredo mal configurado. Por isso existe a conferência
+manual, que pergunta o estado direto à processadora:
+
+- **Cliente**: botão "Já paguei — conferir agora" na tela do pedido
+- **Painel**: botão "Conferir pagamento" no detalhe do pedido
+
+Sem isso, um pedido pago ficaria "aguardando pagamento" para sempre.
+
+### Estoque
+
+Pedido cancelado ou estornado devolve os itens à prateleira. A trava está no
+banco (coluna `stock_restored`), não no código que chama: um pedido cancelado e
+depois estornado passaria pela devolução duas vezes, e a loja passaria a vender
+o que não tem.
+
 ### Três coisas que o desenho já resolve
 
 **Dado de cartão nunca passa pelo servidor.** O cliente paga na página da

@@ -27,7 +27,9 @@ const CHARGE_TONE = {
 }
 
 export default function AdminOrders() {
-  const { orders, updateOrderStatus, deleteOrder, rechargeOrder, settings, toast } = useStore()
+  const {
+    orders, updateOrderStatus, deleteOrder, rechargeOrder, syncOrderPayment, settings, toast,
+  } = useStore()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('')
   const [open, setOpen] = useState(null)
@@ -187,6 +189,29 @@ export default function AdminOrders() {
           title={`Pedido ${orderCode(current.seq, current.createdAt)}`}
           footer={
             <>
+              {/* Conferência manual, para quando o webhook não chegou. */}
+              {current.charge &&
+                current.charge.provider !== 'manual' &&
+                current.charge.status !== 'pago' && (
+                  <button
+                    className="btn btn--secondary"
+                    onClick={async () => {
+                      try {
+                        const r = await syncOrderPayment(current.id)
+                        toast(
+                          r.changed
+                            ? 'Pagamento atualizado.'
+                            : `Sem mudança — segue como "${CHARGE_LABEL[r.status] ?? r.status}".`,
+                        )
+                      } catch (err) {
+                        toast(err.message, 'err')
+                      }
+                    }}
+                  >
+                    <Icon name="refresh" size={16} /> Conferir pagamento
+                  </button>
+                )}
+
               {/* Só faz sentido com processadora: sem ela não há o que refazer. */}
               {current.charge &&
                 current.charge.provider !== 'manual' &&
