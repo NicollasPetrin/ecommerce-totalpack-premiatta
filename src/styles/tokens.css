@@ -325,15 +325,16 @@ ol {
   padding-inline: var(--gutter);
 }
 
-/* A arte da logo tem fundo branco opaco. O cartão claro faz esse branco
-   parecer proposital no tema escuro, em vez de um retângulo solto no meio
-   da tela. No tema claro ele desaparece contra o fundo. */
+/* A arte foi recortada em 93 × 93, exatamente na borda do disco, então o
+   arredondamento total resulta num círculo perfeito — e não numa elipse, que
+   é o que aconteceria com uma imagem retangular.
+   O fundo branco cobre qualquer sobra de antisserrilhado nas bordas. */
 .brand-logo {
   width: auto;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
   background: #fff;
-  border-radius: 22%;
-  padding: 2px;
-  object-fit: contain;
 }
 
 .sr-only {
