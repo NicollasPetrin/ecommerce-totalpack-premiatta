@@ -4,23 +4,45 @@ import { wrap, badRequest, notFound, conflict } from '../lib/http.js'
 import { parse, schemas } from '../lib/validate.js'
 import { requireAdmin } from '../lib/auth.js'
 import { findZone, normalizeCep } from '../lib/shipping.js'
+import { createCharge } from '../lib/payments/service.js'
 import * as s from '../lib/serialize.js'
 
 export const orderRoutes = Router()
 
-/** Carrega pedidos com seus itens em duas consultas, não N+1. */
+/**
+ * Carrega pedidos com itens e pagamento. Três consultas no total,
+ * independente da quantidade de pedidos — nada de N+1.
+ */
 async function withItems(rows) {
   if (!rows.length) return []
-  const items = await many(
-    `SELECT * FROM order_items WHERE order_id = ANY($1::uuid[]) ORDER BY name`,
-    [rows.map((r) => r.id)],
-  )
+  const ids = rows.map((r) => r.id)
+
+  const [items, payments] = await Promise.all([
+    many(`SELECT * FROM order_items WHERE order_id = ANY($1::uuid[]) ORDER BY name`, [ids]),
+    // DISTINCT ON devolve só a cobrança mais recente de cada pedido.
+    many(
+      `SELECT DISTINCT ON (order_id) *
+         FROM payments
+        WHERE order_id = ANY($1::uuid[])
+        ORDER BY order_id, created_at DESC`,
+      [ids],
+    ),
+  ])
+
   const byOrder = new Map()
   for (const item of items) {
     if (!byOrder.has(item.order_id)) byOrder.set(item.order_id, [])
     byOrder.get(item.order_id).push(item)
   }
-  return rows.map((r) => s.order({ ...r, items: byOrder.get(r.id) ?? [] }))
+
+  const paymentByOrder = new Map(payments.map((p) => [p.order_id, p]))
+
+  // `payment` no pedido é o método escolhido ('pix', 'cartao'); a cobrança
+  // vai em `charge`, para os dois não se atropelarem.
+  return rows.map((r) => ({
+    ...s.order({ ...r, items: byOrder.get(r.id) ?? [] }),
+    charge: s.payment(paymentByOrder.get(r.id)),
+  }))
 }
 
 /* ------------------------------------------------------------ Criar pedido */
@@ -136,7 +158,17 @@ orderRoutes.post(
       return s.order({ ...orderRow, items })
     })
 
-    res.status(201).json({ order })
+    /**
+     * A cobrança é criada depois da transação, não dentro dela.
+     *
+     * Chamar a processadora com a transação aberta seguraria as linhas de
+     * produto travadas durante uma requisição de rede — bastaria a
+     * processadora demorar para a loja inteira parar de vender. E se a
+     * cobrança falhar, o pedido já está gravado e o cliente já tem o número.
+     */
+    const payment = await createCharge({ order, customer: d })
+
+    res.status(201).json({ order: { ...order, charge: s.payment(payment) } })
   }),
 )
 
@@ -200,6 +232,29 @@ orderRoutes.put(
     if (!row) throw notFound('Pedido não encontrado.')
     const [order] = await withItems([row])
     res.json({ order })
+  }),
+)
+
+/**
+ * Refaz a cobrança de um pedido — boleto vencido, cartão recusado, ou uma
+ * cobrança que falhou porque a processadora estava fora do ar. Sem isto, um
+ * pedido com cobrança falha vira beco sem saída.
+ */
+orderRoutes.post(
+  '/:id/charge',
+  requireAdmin,
+  wrap(async (req, res) => {
+    const row = await one(`SELECT * FROM orders WHERE id = $1`, [req.params.id])
+    if (!row) throw notFound('Pedido não encontrado.')
+
+    if (row.status === 'cancelado') {
+      throw conflict('Pedido cancelado não pode receber nova cobrança.')
+    }
+
+    const [order] = await withItems([row])
+    const payment = await createCharge({ order, customer: order.customer })
+
+    res.status(201).json({ payment: s.payment(payment) })
   }),
 )
 

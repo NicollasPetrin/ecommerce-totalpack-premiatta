@@ -312,6 +312,15 @@ export function StoreProvider({ children }) {
     setOrders((list) => list.filter((o) => o.id !== orderId))
   }, [])
 
+  /** Refaz a cobrança — boleto vencido, cartão recusado, processadora fora. */
+  const rechargeOrder = useCallback(async (orderId) => {
+    const { payment } = await api.post(`/orders/${orderId}/charge`)
+    setOrders((list) =>
+      list.map((o) => (o.id === orderId ? { ...o, charge: payment } : o)),
+    )
+    return payment
+  }, [])
+
   /* ------------------------------------------------------------------------ */
   /* Catálogo (admin)                                                          */
   /* ------------------------------------------------------------------------ */
@@ -602,6 +611,7 @@ export function StoreProvider({ children }) {
       placeOrder,
       updateOrderStatus,
       deleteOrder,
+      rechargeOrder,
       // admin
       isAdmin,
       login,
@@ -628,7 +638,7 @@ export function StoreProvider({ children }) {
       cart, cartLines, cartCount, subtotal, shipping, total, freeShipping,
       addToCart, setQty, removeFromCart, clearCart, cartOpen,
       cep, zone, outOfRange, saveZone, deleteZone, toggleZone,
-      placeOrder, updateOrderStatus, deleteOrder,
+      placeOrder, updateOrderStatus, deleteOrder, rechargeOrder,
       isAdmin, login, logout, changePassword, saveProduct, deleteProduct,
       toggleProduct, saveCategory, deleteCategory, saveSettings, loadPublic,
       toast, toasts, theme,

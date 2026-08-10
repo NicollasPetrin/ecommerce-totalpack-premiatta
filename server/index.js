@@ -12,11 +12,19 @@ import { authRoutes } from './routes/auth.js'
 import { catalogRoutes } from './routes/catalog.js'
 import { orderRoutes } from './routes/orders.js'
 import { storeRoutes } from './routes/store.js'
+import { webhookRoutes } from './routes/webhooks.js'
 
 const app = express()
 
 app.disable('x-powered-by')
 app.set('trust proxy', 1)
+
+/**
+ * Webhooks vêm antes do express.json de propósito: a conferência de assinatura
+ * precisa dos bytes exatos que a processadora enviou, e interpretar o JSON
+ * aqui destruiria isso. A rota traz o próprio express.raw.
+ */
+app.use('/api/webhooks', webhookRoutes)
 
 // Imagens de produto chegam como data URI em base64; o limite padrão de 100 kb
 // do Express derrubaria o cadastro.
@@ -36,7 +44,7 @@ app.use(readSession)
 app.get('/api/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1')
-    res.json({ ok: true, db: 'conectado' })
+    res.json({ ok: true, db: 'conectado', pagamento: config.paymentProvider })
   } catch (err) {
     res.status(503).json({ ok: false, db: 'indisponível', error: err.message })
   }

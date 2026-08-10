@@ -10,7 +10,7 @@
         "api,web",
         "-c",
         "cyan,magenta",
-        "node server/index.js",
+        "node --watch server/index.js",
         "node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173"
       ],
       "port": 5173

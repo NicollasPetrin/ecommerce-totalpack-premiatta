@@ -7,8 +7,27 @@ import Icon from '../../components/Icon'
 
 const FLOW = ['pendente', 'pago', 'enviado', 'entregue']
 
+/** Situação da cobrança — diferente do status do pedido. */
+const CHARGE_LABEL = {
+  pendente: 'aguardando pagamento',
+  processando: 'processando',
+  pago: 'pago',
+  falhou: 'cobrança falhou',
+  estornado: 'estornado',
+  expirado: 'expirado',
+}
+
+const CHARGE_TONE = {
+  pendente: 'orange',
+  processando: 'teal',
+  pago: 'green',
+  falhou: 'red',
+  estornado: 'red',
+  expirado: 'gray',
+}
+
 export default function AdminOrders() {
-  const { orders, updateOrderStatus, deleteOrder, settings, toast } = useStore()
+  const { orders, updateOrderStatus, deleteOrder, rechargeOrder, settings, toast } = useStore()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('')
   const [open, setOpen] = useState(null)
@@ -168,6 +187,25 @@ export default function AdminOrders() {
           title={`Pedido ${orderCode(current.seq, current.createdAt)}`}
           footer={
             <>
+              {/* Só faz sentido com processadora: sem ela não há o que refazer. */}
+              {current.charge &&
+                current.charge.provider !== 'manual' &&
+                ['falhou', 'expirado'].includes(current.charge.status) && (
+                  <button
+                    className="btn btn--secondary"
+                    onClick={async () => {
+                      try {
+                        await rechargeOrder(current.id)
+                        toast('Nova cobrança criada.')
+                      } catch (err) {
+                        toast(err.message, 'err')
+                      }
+                    }}
+                  >
+                    <Icon name="refresh" size={16} /> Refazer cobrança
+                  </button>
+                )}
+
               {current.customer.email && (
                 <a
                   className="btn btn--secondary"
@@ -305,7 +343,20 @@ export default function AdminOrders() {
                   )}
                   <div>
                     <dt>Pagamento</dt>
-                    <dd>{PAYMENT_LABEL[current.payment]}</dd>
+                    <dd>
+                      {PAYMENT_LABEL[current.payment]}
+                      {current.charge && (
+                        <>
+                          {' · '}
+                          <span className={`tag tag--${CHARGE_TONE[current.charge.status]}`}>
+                            {CHARGE_LABEL[current.charge.status]}
+                          </span>
+                          {current.charge.provider !== 'manual' && (
+                            <div className="cellsub">via {current.charge.provider}</div>
+                          )}
+                        </>
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt>Modalidade</dt>

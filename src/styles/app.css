@@ -1747,6 +1747,9 @@
 
 .paynote svg { color: var(--accent); flex: none; margin-top: 1px; }
 
+.paynote--ok { background: var(--green-soft); }
+.paynote--ok svg { color: var(--green); }
+
 .paynote p {
   font-size: var(--fs-footnote);
   color: var(--label-2);

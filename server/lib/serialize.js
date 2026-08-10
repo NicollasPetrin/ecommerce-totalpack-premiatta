@@ -105,6 +105,22 @@ export const order = (r) => ({
   items: (r.items ?? []).map(orderItem),
 })
 
+/** Nunca expõe `raw`: pode conter dados internos da processadora. */
+export const payment = (r) =>
+  r
+    ? {
+        id: r.id,
+        provider: r.provider,
+        method: r.method,
+        status: r.status,
+        amount: Number(r.amount),
+        checkoutUrl: r.checkout_url,
+        paidAt: r.paid_at,
+        expiresAt: r.expires_at,
+        createdAt: r.created_at,
+      }
+    : null
+
 export const settings = (r) => ({
   storeName: r.store_name,
   tagline: r.tagline,

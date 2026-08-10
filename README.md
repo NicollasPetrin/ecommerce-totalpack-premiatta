@@ -132,6 +132,56 @@ Para trocar por cotação real (Correios, Melhor Envio), o ponto de mudança é
 `server/lib/shipping.js` — e será preciso acrescentar peso e dimensões ao
 cadastro de produto, que nenhuma transportadora dispensa.
 
+## Pagamento
+
+A loja está **preparada** para uma processadora, mas ainda não tem uma. Hoje
+`PAYMENT_PROVIDER=manual`: a cobrança é registrada e o acerto acontece fora do
+site, por PIX, cartão ou boleto combinados por contato.
+
+### Como está montado
+
+```
+server/lib/payments/
+  index.js     contrato que toda processadora implementa + registro
+  manual.js    adaptador padrão, sem processadora
+  service.js   ponte entre pedido e processadora, e aplicação de eventos
+server/routes/webhooks.js   recebe as notificações
+```
+
+Tabelas: `payments` (uma linha por tentativa de cobrança) e `webhook_events`
+(toda notificação recebida, com chave única por evento).
+
+### Para integrar uma processadora
+
+1. Crie `server/lib/payments/<nome>.js` implementando `createCharge`,
+   `verifySignature` e `parseEvent` — o contrato está documentado em
+   `index.js`.
+2. Registre o adaptador no objeto `providers` de `index.js`.
+3. No ambiente, defina `PAYMENT_PROVIDER=<nome>`, `PAYMENT_SECRET_KEY`,
+   `PAYMENT_WEBHOOK_SECRET` e `PUBLIC_URL`.
+4. No painel da processadora, cadastre o webhook:
+   `https://seu-dominio/api/webhooks/payments/<nome>`
+
+Nenhuma rota, tela ou tabela muda. O checkout passa a devolver uma URL de
+pagamento, a tela de confirmação mostra "Pagar agora", e o pedido vira `pago`
+sozinho quando o webhook chega.
+
+### Três coisas que o desenho já resolve
+
+**Dado de cartão nunca passa pelo servidor.** O cliente paga na página da
+processadora (checkout hospedado) ou em campos que são iframes dela
+(tokenização). Guardar ou trafegar número de cartão exige certificação
+PCI-DSS — se algum adaptador aqui receber um, o desenho está errado.
+
+**O webhook confere assinatura antes de qualquer coisa**, sobre o corpo cru da
+requisição. Por isso a rota é montada antes do `express.json` em `index.js`:
+interpretar o JSON antes reserializa o conteúdo e a conferência falha sempre.
+
+**Evento repetido não conta duas vezes.** A processadora reenvia quando não
+recebe 200; o índice único em `webhook_events (provider, event_id)` reconhece
+o reenvio e ignora. E um evento atrasado não faz um pedido já enviado voltar
+de status.
+
 ## Backup
 
 Os dados estão no PostgreSQL:
@@ -150,8 +200,9 @@ O que ainda falta, em ordem de urgência:
 1. **Os pedidos não avisam ninguém.** Eles são gravados no banco e aparecem no
    painel, mas ninguém é notificado. Falta disparar e-mail (ou outro aviso) na
    criação do pedido — o gancho é o final de `POST /api/orders`.
-2. **Pagamento.** PIX e boleto são combinados fora do site. Integrar uma
-   processadora é o próximo passo natural agora que existe servidor.
+2. **Pagamento.** A estrutura está pronta (ver seção Pagamento), mas nenhuma
+   processadora está ligada: as cobranças ficam em `manual` e o acerto é feito
+   por contato.
 3. **HTTPS e segredos.** Em produção, `NODE_ENV=production` liga o cookie
    `secure`; o `JWT_SECRET` precisa ser longo e ficar fora do repositório.
 4. **Limite de tentativas de login.** Não há proteção contra força bruta nas

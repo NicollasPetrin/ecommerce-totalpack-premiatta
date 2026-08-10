@@ -177,6 +177,80 @@ CREATE INDEX IF NOT EXISTS orders_customer_idx ON orders (customer_id);
 CREATE INDEX IF NOT EXISTS orders_created_idx ON orders (created_at DESC);
 CREATE INDEX IF NOT EXISTS orders_status_idx ON orders (status);
 
+-- -----------------------------------------------------------------------------
+-- Pagamentos
+--
+-- Uma linha por tentativa de cobrança. Fica separada de `orders` porque uma
+-- cobrança pode ser refeita (boleto vencido, cartão recusado) sem que o pedido
+-- deixe de ser o mesmo, e porque o histórico de tentativas importa numa
+-- eventual contestação.
+--
+-- Nada aqui guarda dado de cartão: só o identificador que a processadora
+-- devolve e o endereço para onde o cliente foi pagar.
+-- -----------------------------------------------------------------------------
+
+DO $$ BEGIN
+  CREATE TYPE payment_status AS ENUM (
+    'pendente',    -- cobrança criada, aguardando o cliente
+    'processando', -- processadora confirmou recebimento, ainda compensando
+    'pago',
+    'falhou',
+    'estornado',
+    'expirado'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS payments (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id     UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  -- 'manual' enquanto não houver processadora; depois 'mercadopago', 'asaas'…
+  provider     TEXT NOT NULL,
+  -- Identificador da cobrança no lado da processadora.
+  provider_ref TEXT,
+  method       TEXT NOT NULL,
+  status       payment_status NOT NULL DEFAULT 'pendente',
+  amount       NUMERIC(10,2) NOT NULL CHECK (amount >= 0),
+  -- Para onde mandar o cliente pagar (checkout hospedado ou boleto).
+  checkout_url TEXT,
+  -- Copia crua da resposta da processadora, útil para depurar divergências.
+  raw          JSONB NOT NULL DEFAULT '{}'::jsonb,
+  paid_at      TIMESTAMPTZ,
+  expires_at   TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS payments_order_idx ON payments (order_id);
+CREATE INDEX IF NOT EXISTS payments_status_idx ON payments (status);
+
+-- A processadora manda o mesmo evento mais de uma vez quando não recebe 200 na
+-- primeira. Sem esta chave única, um pagamento seria contabilizado em dobro.
+CREATE UNIQUE INDEX IF NOT EXISTS payments_provider_ref_idx
+  ON payments (provider, provider_ref) WHERE provider_ref IS NOT NULL;
+
+-- -----------------------------------------------------------------------------
+-- Eventos de webhook
+--
+-- Toda notificação recebida é registrada antes de ser processada. Serve para
+-- dois fins: garantir que o mesmo evento não seja aplicado duas vezes, e deixar
+-- rastro do que a processadora enviou quando algo não bater.
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider     TEXT NOT NULL,
+  event_id     TEXT NOT NULL,
+  event_type   TEXT NOT NULL DEFAULT '',
+  payload      JSONB NOT NULL DEFAULT '{}'::jsonb,
+  processed_at TIMESTAMPTZ,
+  error        TEXT,
+  received_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS webhook_events_unique_idx
+  ON webhook_events (provider, event_id);
+
 CREATE TABLE IF NOT EXISTS order_items (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id   UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -229,7 +303,7 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t TEXT;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['customers', 'products', 'orders', 'settings'] LOOP
+  FOREACH t IN ARRAY ARRAY['customers', 'products', 'orders', 'settings', 'payments'] LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS %I_touch ON %I', t, t);
     EXECUTE format(
       'CREATE TRIGGER %I_touch BEFORE UPDATE ON %I

@@ -73,7 +73,24 @@ export default function OrderSuccess() {
         </p>
 
         <div className="success__cta">
-          <Link className="btn btn--primary btn--lg" to="/catalogo">
+          {/* Só aparece quando a processadora devolveu um endereço de
+              pagamento. Sem integração, o acerto é combinado por contato. */}
+          {order.charge?.checkoutUrl && order.charge.status !== 'pago' && (
+            <a
+              className="btn btn--primary btn--lg"
+              href={order.charge.checkoutUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Icon name="shield" size={18} /> Pagar agora
+            </a>
+          )}
+          <Link
+            className={`btn btn--lg ${
+              order.charge?.checkoutUrl ? 'btn--outline' : 'btn--primary'
+            }`}
+            to="/catalogo"
+          >
             Continuar comprando
           </Link>
         </div>
@@ -156,6 +173,16 @@ export default function OrderSuccess() {
               </div>
             )}
           </dl>
+
+          {order.charge?.status === 'pago' && (
+            <div className="paynote paynote--ok">
+              <Icon name="checkCircle" size={18} />
+              <p>
+                <strong>Pagamento confirmado.</strong> Já estamos separando o seu
+                pedido.
+              </p>
+            </div>
+          )}
 
           {order.payment === 'pix' && (
             <div className="pixbox">
