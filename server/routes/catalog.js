@@ -40,19 +40,21 @@ async function salvarVariacoes(client, productId, variantes) {
   )
 
   for (const [i, v] of variantes.entries()) {
+    const opcoes = JSON.stringify(v.options ?? {})
     if (v.id) {
       await client.query(
         `UPDATE product_variants
-            SET name=$1, sku=$2, price=$3, promo=$4, stock=$5, active=$6, position=$7
-          WHERE id=$8 AND product_id=$9`,
-        [v.name, v.sku, v.price, v.promo, v.stock, v.active, i, v.id, productId],
+            SET name=$1, options=$2::jsonb, sku=$3, gtin=$4, price=$5, promo=$6,
+                stock=$7, active=$8, position=$9
+          WHERE id=$10 AND product_id=$11`,
+        [v.name, opcoes, v.sku, v.gtin, v.price, v.promo, v.stock, v.active, i, v.id, productId],
       )
     } else {
       await client.query(
         `INSERT INTO product_variants
-           (product_id, name, sku, price, promo, stock, active, position)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [productId, v.name, v.sku, v.price, v.promo, v.stock, v.active, i],
+           (product_id, name, options, sku, gtin, price, promo, stock, active, position)
+         VALUES ($1,$2,$3::jsonb,$4,$5,$6,$7,$8,$9,$10)`,
+        [productId, v.name, opcoes, v.sku, v.gtin, v.price, v.promo, v.stock, v.active, i],
       )
     }
   }
@@ -166,14 +168,14 @@ catalogRoutes.post(
         `INSERT INTO products
            (category_id, name, sku, description, price, promo, stock, unit,
             art, tint, image, specs, featured, active,
-            weight_g, length_cm, width_cm, height_cm, variant_label)
+            weight_g, length_cm, width_cm, height_cm, variant_axes)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,
                  $15,$16,$17,$18,$19)
          RETURNING *`,
         [
           d.categoryId, d.name, d.sku, d.description, d.price, d.promo, d.stock,
           d.unit, d.art, d.tint, d.image, JSON.stringify(d.specs), d.featured, d.active,
-          d.weightG, d.lengthCm, d.widthCm, d.heightCm, d.variantLabel,
+          d.weightG, d.lengthCm, d.widthCm, d.heightCm, JSON.stringify(d.variantAxes),
         ],
       )
       const produto = rows[0]
@@ -196,12 +198,12 @@ catalogRoutes.put(
            stock=$7, unit=$8, art=$9, tint=$10, image=$11, specs=$12::jsonb,
            featured=$13, active=$14,
            weight_g=$15, length_cm=$16, width_cm=$17, height_cm=$18,
-           variant_label=$19
+           variant_axes=$19::jsonb
          WHERE id=$20 RETURNING *`,
         [
           d.categoryId, d.name, d.sku, d.description, d.price, d.promo, d.stock,
           d.unit, d.art, d.tint, d.image, JSON.stringify(d.specs), d.featured,
-          d.active, d.weightG, d.lengthCm, d.widthCm, d.heightCm, d.variantLabel,
+          d.active, d.weightG, d.lengthCm, d.widthCm, d.heightCm, JSON.stringify(d.variantAxes),
           req.params.id,
         ],
       )

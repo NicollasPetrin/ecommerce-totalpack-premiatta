@@ -274,9 +274,9 @@ export function StoreProvider({ children }) {
 
       // Produto com variação exige escolha: sem ela não dá para saber qual
       // estoque baixar nem qual preço cobrar.
-      const temVariacoes = (product.variants ?? []).length > 0
-      if (temVariacoes && !variant) {
-        toast(`Escolha uma opção de ${product.variantLabel || 'variação'}.`, 'err')
+      const eixos = product.variantAxes ?? []
+      if (eixos.length > 0 && (product.variants ?? []).length > 0 && !variant) {
+        toast(`Escolha ${eixos.map((a) => a.name.toLowerCase()).join(' e ')}.`, 'err')
         return
       }
 

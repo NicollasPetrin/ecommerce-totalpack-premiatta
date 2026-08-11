@@ -321,6 +321,13 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS height_cm NUMERIC(6,1) NOT NULL DE
 -- que é o comportamento de sempre.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_label TEXT NOT NULL DEFAULT '';
 
+-- Grade de variação, no formato dos ERPs de marketplace:
+--   [{ "name": "Cor", "options": ["Azul","Vermelho"] },
+--    { "name": "Tamanho", "options": ["P","M","G"] }]
+-- Cada cruzamento vira uma linha em product_variants com o seu próprio código,
+-- preço e estoque. Substitui o variant_label, que só permitia um eixo.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_axes JSONB NOT NULL DEFAULT '[]'::jsonb;
+
 -- -----------------------------------------------------------------------------
 -- Variações de produto
 --
@@ -352,6 +359,40 @@ CREATE INDEX IF NOT EXISTS product_variants_product
 ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_id
   UUID REFERENCES product_variants(id) ON DELETE SET NULL;
 ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_name TEXT NOT NULL DEFAULT '';
+
+-- Qual ponto da grade esta variação ocupa: {"Cor":"Azul","Tamanho":"P"}.
+-- O `name` continua existindo como rótulo pronto ("Azul / P"), para não
+-- remontar a string em toda tela.
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS options JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+-- Código de barras por variação, como os ERPs de marketplace exigem.
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS gtin TEXT NOT NULL DEFAULT '';
+
+-- Converte o eixo único antigo para a grade. Roda uma vez: depois da conversão
+-- o variant_label fica vazio e as condições param de casar.
+UPDATE products
+   SET variant_axes = jsonb_build_array(
+         jsonb_build_object(
+           'name', variant_label,
+           'options', COALESCE(
+             (SELECT jsonb_agg(v.name ORDER BY v.position, v.name)
+                FROM product_variants v WHERE v.product_id = products.id),
+             '[]'::jsonb)))
+ WHERE variant_label <> '' AND variant_axes = '[]'::jsonb;
+
+UPDATE product_variants v
+   SET options = jsonb_build_object(p.variant_label, v.name)
+  FROM products p
+ WHERE v.product_id = p.id AND p.variant_label <> '' AND v.options = '{}'::jsonb;
+
+UPDATE products SET variant_label = '' WHERE variant_label <> '';
+
+-- Dois pontos iguais da grade seriam dois estoques para a mesma coisa. O
+-- jsonb normaliza a ordem das chaves, então {"Cor":"Azul","Tam":"P"} e
+-- {"Tam":"P","Cor":"Azul"} colidem como devem.
+CREATE UNIQUE INDEX IF NOT EXISTS product_variants_combinacao
+  ON product_variants (product_id, options)
+  WHERE options <> '{}'::jsonb;
 
 -- -----------------------------------------------------------------------------
 -- updated_at automático

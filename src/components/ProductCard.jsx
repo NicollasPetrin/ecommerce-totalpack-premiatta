@@ -10,8 +10,9 @@ export default function ProductCard({ product }) {
   /* Com variação o card mostra a opção mais barata que ainda tem estoque, e o
      estoque é a soma das opções — é o que o cliente enxerga como "tem ou não
      tem". A escolha em si acontece na página do produto. */
+  const eixos = product.variantAxes ?? []
   const variacoes = (product.variants ?? []).filter((v) => v.active)
-  const temVariacoes = variacoes.length > 0
+  const temVariacoes = eixos.length > 0 && variacoes.length > 0
 
   const vitrine = temVariacoes
     ? [...variacoes].sort((a, b) => effectivePrice(a) - effectivePrice(b))[0]
@@ -62,7 +63,7 @@ export default function ProductCard({ product }) {
             aria-disabled={out}
           >
             <Icon name="grid" size={16} />
-            {out ? 'Sem estoque' : `Escolher ${(product.variantLabel || '').toLowerCase()}`}
+            {out ? 'Sem estoque' : `Escolher ${eixos.map((a) => a.name.toLowerCase()).join(' e ')}`}
           </Link>
         ) : (
           <button

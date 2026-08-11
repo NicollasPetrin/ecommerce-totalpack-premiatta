@@ -92,14 +92,38 @@ export const schemas = {
       lengthCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
       widthCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
       heightCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
-      variantLabel: z.string().trim().default(''),
+      /* Grade: eixos com as suas opções.
+       *
+       * Os tetos existem porque o smoke test mostrou que sem eles um erro de
+       * digitação (100 opções em dois eixos) grava 10 mil combinações, e o
+       * catálogo — que todo visitante baixa inteiro — passou de 4 MB. Os
+       * números seguem o que os marketplaces praticam e sobram para qualquer
+       * papelaria real. */
+      variantAxes: z
+        .array(
+          z.object({
+            name: z
+              .string()
+              .trim()
+              .min(1, 'Dê um nome ao eixo (ex.: Cor).')
+              .max(40, 'Nome do eixo muito longo.'),
+            options: z
+              .array(z.string().trim().min(1).max(40, 'Opção muito longa.'))
+              .min(1, 'Cada eixo precisa de ao menos uma opção.')
+              .max(60, 'Máximo de 60 opções por eixo.'),
+          }),
+        )
+        .max(3, 'Máximo de 3 eixos de variação.')
+        .default([]),
       variants: z
         .array(
           z
             .object({
               id: z.string().uuid().nullish(),
-              name: z.string().trim().min(1, 'Informe o nome da variação.'),
-              sku: z.string().trim().default(''),
+              name: z.string().trim().min(1, 'Informe o nome da variação.').max(160),
+              options: z.record(z.string().max(40), z.string().max(40)).default({}),
+              sku: z.string().trim().max(60).default(''),
+              gtin: z.string().trim().max(14).default(''),
               price: money.refine((v) => v > 0, 'Preço deve ser maior que zero.'),
               promo: money.default(0),
               stock: z.coerce.number().int().min(0, 'Estoque inválido.'),
@@ -110,24 +134,57 @@ export const schemas = {
               path: ['promo'],
             }),
         )
+        .max(300, 'Máximo de 300 combinações por produto.')
         .default([]),
     })
     .refine((p) => p.promo === 0 || p.promo < p.price, {
       message: 'A promoção deve ser menor que o preço.',
       path: ['promo'],
     })
-    /* Uma lista de variações sem nome de eixo não diz nada ao cliente: ele
-       veria botões soltos sem saber se escolhe cor ou tamanho. */
-    .refine((p) => p.variants.length === 0 || p.variantLabel.length > 0, {
-      message: 'Dê um nome ao tipo de variação (ex.: Cor, Tamanho).',
-      path: ['variantLabel'],
+    /* Uma lista de variações sem eixo não diz nada ao cliente: ele veria
+       botões soltos sem saber se escolhe cor ou tamanho. */
+    .refine((p) => p.variants.length === 0 || p.variantAxes.length > 0, {
+      message: 'Defina ao menos um eixo de variação (ex.: Cor).',
+      path: ['variantAxes'],
     })
     .refine(
       (p) => {
-        const nomes = p.variants.map((v) => v.name.toLowerCase())
-        return new Set(nomes).size === nomes.length
+        const eixos = p.variantAxes.map((a) => a.name.toLowerCase())
+        return new Set(eixos).size === eixos.length
       },
-      { message: 'Há variações com o mesmo nome.', path: ['variants'] },
+      { message: 'Há eixos com o mesmo nome.', path: ['variantAxes'] },
+    )
+    .refine(
+      (p) =>
+        p.variantAxes.every((a) => {
+          const o = a.options.map((x) => x.toLowerCase())
+          return new Set(o).size === o.length
+        }),
+      { message: 'Há opções repetidas dentro de um eixo.', path: ['variantAxes'] },
+    )
+    /* Cada variação precisa marcar um ponto da grade, com valor válido em
+       todos os eixos. Sem isso a loja não conseguiria resolver qual variação
+       corresponde à escolha do cliente. */
+    .refine(
+      (p) =>
+        p.variants.every((v) =>
+          p.variantAxes.every((a) => a.options.includes(v.options?.[a.name])),
+        ),
+      {
+        message: 'Há variação que não corresponde às opções dos eixos.',
+        path: ['variants'],
+      },
+    )
+    .refine(
+      (p) => {
+        // Duas variações no mesmo ponto da grade seriam dois estoques para a
+        // mesma coisa. O banco também barra, mas aqui a mensagem é melhor.
+        const pontos = p.variants.map((v) =>
+          p.variantAxes.map((a) => v.options?.[a.name]).join(' / '),
+        )
+        return new Set(pontos).size === pontos.length
+      },
+      { message: 'Há duas variações para a mesma combinação.', path: ['variants'] },
     ),
 
   zone: z

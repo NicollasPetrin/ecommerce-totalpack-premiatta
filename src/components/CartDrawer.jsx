@@ -108,7 +108,7 @@ export default function CartDrawer() {
                     </Link>
                     {l.variant && (
                       <span className="cline__variant">
-                        {l.product.variantLabel}: {l.variant.name}
+                        {l.variant.name}
                       </span>
                     )}
                     <span className="cline__unit">{money(l.price)} / {l.product.unit}</span>

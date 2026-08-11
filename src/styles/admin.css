@@ -670,15 +670,61 @@
   margin-bottom: 10px;
 }
 
-.vrow {
+/* Eixos da grade */
+.axis {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 0.9fr 0.9fr 0.9fr auto auto;
+  grid-template-columns: 150px 1fr auto auto;
   gap: 7px;
   align-items: center;
+  margin-bottom: 8px;
+}
+
+.axis__count {
+  min-width: 26px;
+  padding: 3px 7px;
+  border-radius: var(--r-full);
+  background: var(--bg-sunken);
+  font-size: var(--fs-caption);
+  color: var(--label-3);
+  text-align: center;
+}
+
+.axis__actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+/* Cabeçalho e linhas da grade — mesmas colunas, para alinhar */
+.vhead,
+.vrow {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 0.85fr 0.85fr 0.85fr auto auto;
+  gap: 7px;
+  align-items: center;
+}
+
+.vhead {
+  padding: 0 9px 6px;
+  font-size: var(--fs-caption);
+  color: var(--label-3);
+}
+
+.linkish {
+  color: var(--accent);
+  font-size: 11px;
+  text-decoration: underline;
+}
+
+.vrow {
   padding: 9px;
   border-radius: var(--r-sm);
   background: var(--bg-grouped);
   border: 1px solid var(--separator);
+}
+
+.vrow__combo {
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .vrow .input { min-height: 38px; padding-inline: 9px; font-size: var(--fs-footnote); }
@@ -697,10 +743,13 @@
 /* No celular a linha de sete colunas vira um bloco: cada campo ocupa a
    largura toda, senão nenhum deles fica legível. */
 @media (max-width: 760px) {
+  .vhead { display: none; }
+  .axis { grid-template-columns: 1fr auto auto; }
+  .axis__name { grid-column: 1 / -1; }
   .vrow {
     grid-template-columns: 1fr 1fr;
   }
-  .vrow__name { grid-column: span 2; }
+  .vrow__combo { grid-column: span 2; }
   .vrow .input { min-height: 44px; font-size: 16px; }
   .vrow__on { grid-column: span 2; }
   .vrow .icon-btn { width: 44px; height: 44px; justify-self: end; }

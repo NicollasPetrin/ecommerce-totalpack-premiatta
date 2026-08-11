@@ -33,18 +33,48 @@ const blank = (categoryId) => ({
   lengthCm: '',
   widthCm: '',
   heightCm: '',
-  variantLabel: '',
+  variantAxes: [],
   variants: [],
 })
 
-/** Linha nova do editor de variações. */
-const variacaoVazia = () => ({
+const uid = () => Math.random().toString(36).slice(2)
+
+/* Espelham os limites do servidor, para o erro aparecer antes de enviar. */
+const MAX_EIXOS = 3
+const MAX_OPCOES = 60
+const MAX_COMBINACOES = 300
+
+/** Rótulo pronto de uma combinação: { Cor:'Azul', Tam:'P' } → "Azul / P". */
+const rotulo = (eixos, opcoes) =>
+  eixos.map((a) => opcoes[a.name]).filter(Boolean).join(' / ')
+
+/**
+ * Produto cartesiano dos eixos — é o que os ERPs chamam de "gerar grade".
+ *
+ * Devolve uma combinação por cruzamento: dois eixos de 3 e 4 opções geram 12
+ * linhas. Eixo sem opção nenhuma é ignorado, senão zeraria o produto inteiro.
+ */
+function gerarGrade(eixos) {
+  const validos = eixos.filter((a) => a.name.trim() && a.options.length > 0)
+  if (!validos.length) return []
+
+  return validos.reduce(
+    (acc, eixo) =>
+      acc.flatMap((parcial) => eixo.options.map((o) => ({ ...parcial, [eixo.name.trim()]: o }))),
+    [{}],
+  )
+}
+
+/** Linha nova da grade. */
+const variacaoVazia = (opcoes = {}, eixos = []) => ({
   id: null,
   // Chave só do formulário: a variação ainda não tem id do banco, e usar o
   // índice faria o React embaralhar os campos ao remover uma linha do meio.
-  uid: Math.random().toString(36).slice(2),
-  name: '',
+  uid: uid(),
+  options: opcoes,
+  name: rotulo(eixos, opcoes),
   sku: '',
+  gtin: '',
   price: '',
   promo: '',
   stock: '',
@@ -283,10 +313,12 @@ function ProductForm({ value, categories, onClose, onSave }) {
     lengthCm: value.lengthCm ? String(value.lengthCm) : '',
     widthCm: value.widthCm ? String(value.widthCm) : '',
     heightCm: value.heightCm ? String(value.heightCm) : '',
-    variantLabel: value.variantLabel ?? '',
+    variantAxes: (value.variantAxes ?? []).map((a) => ({ ...a, uid: uid() })),
     variants: (value.variants ?? []).map((v) => ({
       ...v,
-      uid: v.id ?? Math.random().toString(36).slice(2),
+      uid: v.id ?? uid(),
+      options: v.options ?? {},
+      gtin: v.gtin ?? '',
       price: v.price === '' ? '' : String(v.price),
       promo: v.promo ? String(v.promo) : '',
       stock: v.stock === '' ? '' : String(v.stock),
@@ -320,20 +352,70 @@ function ProductForm({ value, categories, onClose, onSave }) {
     setSpecDraft('')
   }
 
-  /* ---- Variações ---- */
-  const setVariacao = (uid, campo, v) => {
+  /* ---- Eixos da grade ---- */
+  const setEixo = (u, campo, v) => {
     setF((old) => ({
       ...old,
-      variants: old.variants.map((x) => (x.uid === uid ? { ...x, [campo]: v } : x)),
+      variantAxes: old.variantAxes.map((a) => (a.uid === u ? { ...a, [campo]: v } : a)),
+    }))
+    setErrors((e) => ({ ...e, variantAxes: undefined }))
+  }
+
+  const addEixo = () =>
+    setF((old) => ({ ...old, variantAxes: [...old.variantAxes, { uid: uid(), name: '', options: [] }] }))
+
+  const removeEixo = (u) =>
+    setF((old) => ({ ...old, variantAxes: old.variantAxes.filter((a) => a.uid !== u) }))
+
+  /**
+   * Gera a grade preservando o que já existe.
+   *
+   * Combinação que já tinha preço e estoque é mantida pelo id — regerar do
+   * zero apagaria o estoque digitado e quebraria o vínculo com os pedidos.
+   * O que sumiu da grade sai; o que é novo entra em branco.
+   */
+  const gerar = () => {
+    setF((old) => {
+      const eixos = old.variantAxes
+      const pontos = gerarGrade(eixos)
+      if (!pontos.length) return old
+
+      const antigas = new Map(old.variants.map((v) => [rotulo(eixos, v.options ?? {}), v]))
+
+      return {
+        ...old,
+        variants: pontos.map((opcoes) => {
+          const chave = rotulo(eixos, opcoes)
+          const existente = antigas.get(chave)
+          return existente
+            ? { ...existente, options: opcoes, name: chave }
+            : variacaoVazia(opcoes, eixos)
+        }),
+      }
+    })
+    setErrors((e) => ({ ...e, variants: undefined }))
+  }
+
+  /* ---- Linhas da grade ---- */
+  const setVariacao = (u, campo, v) => {
+    setF((old) => ({
+      ...old,
+      variants: old.variants.map((x) => (x.uid === u ? { ...x, [campo]: v } : x)),
     }))
     setErrors((e) => ({ ...e, variants: undefined }))
   }
 
-  const addVariacao = () =>
-    setF((old) => ({ ...old, variants: [...old.variants, variacaoVazia()] }))
+  const removeVariacao = (u) =>
+    setF((old) => ({ ...old, variants: old.variants.filter((x) => x.uid !== u) }))
 
-  const removeVariacao = (uid) =>
-    setF((old) => ({ ...old, variants: old.variants.filter((x) => x.uid !== uid) }))
+  /** Preenche a coluna inteira a partir da primeira linha — atalho de ERP. */
+  const replicar = (campo) =>
+    setF((old) => {
+      const valor = old.variants[0]?.[campo] ?? ''
+      return { ...old, variants: old.variants.map((v) => ({ ...v, [campo]: valor })) }
+    })
+
+  const combinacoesPrevistas = gerarGrade(f.variantAxes).length
 
   const submit = (e) => {
     e.preventDefault()
@@ -349,10 +431,16 @@ function ProductForm({ value, categories, onClose, onSave }) {
     if (promo > 0 && promo >= price) err.promo = 'A promoção deve ser menor que o preço.'
     if (!Number.isFinite(stock) || stock < 0) err.stock = 'Estoque inválido.'
 
+    const eixos = f.variantAxes
+      .map((a) => ({ name: a.name.trim(), options: a.options.filter((o) => o.trim()) }))
+      .filter((a) => a.name && a.options.length > 0)
+
     const variacoes = f.variants.map((v) => ({
       id: v.id || null,
-      name: v.name.trim(),
+      name: rotulo(eixos, v.options ?? {}) || v.name.trim(),
+      options: v.options ?? {},
       sku: v.sku.trim(),
+      gtin: v.gtin.trim(),
       price: Number(String(v.price).replace(',', '.')),
       promo: v.promo === '' ? 0 : Number(String(v.promo).replace(',', '.')),
       stock: Number(v.stock),
@@ -360,10 +448,33 @@ function ProductForm({ value, categories, onClose, onSave }) {
     }))
 
     if (variacoes.length > 0) {
-      if (!f.variantLabel.trim()) {
-        err.variantLabel = 'Dê um nome ao tipo de variação (ex.: Cor, Tamanho).'
+      const nomesEixo = eixos.map((a) => a.name.toLowerCase())
+      if (eixos.length === 0) {
+        err.variantAxes = 'Defina ao menos um eixo com opções (ex.: Cor: Azul, Vermelho).'
+      } else if (new Set(nomesEixo).size !== nomesEixo.length) {
+        err.variantAxes = 'Há eixos com o mesmo nome.'
+      } else if (
+        eixos.some((a) => {
+          const o = a.options.map((x) => x.toLowerCase())
+          return new Set(o).size !== o.length
+        })
+      ) {
+        err.variantAxes = 'Há opções repetidas dentro de um eixo.'
+      } else if (eixos.length > MAX_EIXOS) {
+        err.variantAxes = `Máximo de ${MAX_EIXOS} eixos de variação.`
+      } else if (eixos.some((a) => a.options.length > MAX_OPCOES)) {
+        err.variantAxes = `Máximo de ${MAX_OPCOES} opções por eixo.`
+      } else if (variacoes.length > MAX_COMBINACOES) {
+        err.variants = `Máximo de ${MAX_COMBINACOES} combinações por produto. Esta grade tem ${variacoes.length}.`
+      } else if (
+        variacoes.some((v) => !eixos.every((a) => a.options.includes(v.options?.[a.name])))
+      ) {
+        err.variants = 'A grade está desatualizada. Toque em “Gerar grade”.'
       }
-      if (variacoes.some((v) => !v.name)) err.variants = 'Toda variação precisa de nome.'
+
+      if (err.variantAxes || err.variants) {
+        // já há erro estrutural: não vale checar preço linha a linha
+      } else if (variacoes.some((v) => !v.name)) err.variants = 'Toda variação precisa de nome.'
       else if (variacoes.some((v) => !(v.price > 0))) {
         err.variants = 'Toda variação precisa de preço maior que zero.'
       } else if (variacoes.some((v) => v.promo > 0 && v.promo >= v.price)) {
@@ -400,7 +511,7 @@ function ProductForm({ value, categories, onClose, onSave }) {
       lengthCm: medida(f.lengthCm),
       widthCm: medida(f.widthCm),
       heightCm: medida(f.heightCm),
-      variantLabel: f.variantLabel.trim(),
+      variantAxes: eixos,
       variants: variacoes,
     })
   }
@@ -614,104 +725,181 @@ function ProductForm({ value, categories, onClose, onSave }) {
             </div>
           </div>
 
-          {/* Variações */}
-          <div className={`field${errors.variants || errors.variantLabel ? ' has-error' : ''}`}>
+          {/* Grade de variações */}
+          <div className={`field${errors.variantAxes ? ' has-error' : ''}`}>
             <span className="label">Variações</span>
             <p className="hint">
-              Use quando o mesmo produto tem opções com preço ou estoque próprios —
-              colorset por cor, caderno por número de folhas. Sem variação, o produto
-              usa o preço e o estoque preenchidos acima.
+              Defina os eixos e as opções de cada um; a grade cruza tudo e cria uma
+              linha por combinação, com código, preço e estoque próprios. Sem eixo
+              nenhum, o produto usa o preço e o estoque preenchidos acima.
             </p>
 
-            {f.variants.length > 0 && (
-              <>
-                <div className="field">
-                  <label htmlFor="pf-vlabel">O que muda entre as opções? *</label>
-                  <input
-                    id="pf-vlabel"
-                    className="input"
-                    value={f.variantLabel}
-                    onChange={(e) => set('variantLabel', e.target.value)}
-                    placeholder="Cor, Tamanho, Gramatura…"
-                  />
-                  {errors.variantLabel && <span className="err">{errors.variantLabel}</span>}
-                </div>
+            {f.variantAxes.map((a) => (
+              <div className="axis" key={a.uid}>
+                <input
+                  className="input axis__name"
+                  value={a.name}
+                  onChange={(e) => setEixo(a.uid, 'name', e.target.value)}
+                  placeholder="Cor"
+                  aria-label="Nome do eixo"
+                />
+                <input
+                  className="input axis__opts"
+                  value={a.options.join(', ')}
+                  onChange={(e) =>
+                    setEixo(
+                      a.uid,
+                      'options',
+                      e.target.value.split(',').map((o) => o.trim()).filter(Boolean),
+                    )
+                  }
+                  placeholder="Azul, Vermelho, Preto (separe por vírgula)"
+                  aria-label={`Opções de ${a.name || 'eixo'}`}
+                />
+                <span className="axis__count">{a.options.length}</span>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => removeEixo(a.uid)}
+                  aria-label={`Remover eixo ${a.name || 'sem nome'}`}
+                >
+                  <Icon name="trash" size={15} />
+                </button>
+              </div>
+            ))}
 
-                <ul className="vlist">
-                  {f.variants.map((v) => (
-                    <li key={v.uid} className="vrow">
-                      <input
-                        className="input vrow__name"
-                        value={v.name}
-                        onChange={(e) => setVariacao(v.uid, 'name', e.target.value)}
-                        placeholder="Azul"
-                        aria-label="Nome da variação"
-                      />
-                      <input
-                        className="input vrow__sku"
-                        value={v.sku}
-                        onChange={(e) => setVariacao(v.uid, 'sku', e.target.value)}
-                        placeholder="Código"
-                        aria-label="Código da variação"
-                      />
-                      <input
-                        className="input vrow__num"
-                        inputMode="decimal"
-                        value={v.price}
-                        onChange={(e) =>
-                          setVariacao(v.uid, 'price', e.target.value.replace(/[^\d,.]/g, ''))
-                        }
-                        placeholder="Preço"
-                        aria-label="Preço da variação"
-                      />
-                      <input
-                        className="input vrow__num"
-                        inputMode="decimal"
-                        value={v.promo}
-                        onChange={(e) =>
-                          setVariacao(v.uid, 'promo', e.target.value.replace(/[^\d,.]/g, ''))
-                        }
-                        placeholder="Promo"
-                        aria-label="Preço promocional da variação"
-                      />
-                      <input
-                        className="input vrow__num"
-                        inputMode="numeric"
-                        value={v.stock}
-                        onChange={(e) =>
-                          setVariacao(v.uid, 'stock', e.target.value.replace(/\D/g, ''))
-                        }
-                        placeholder="Estoque"
-                        aria-label="Estoque da variação"
-                      />
-                      <label className="vrow__on" title="Disponível na loja">
-                        <input
-                          type="checkbox"
-                          checked={v.active !== false}
-                          onChange={(e) => setVariacao(v.uid, 'active', e.target.checked)}
-                        />
-                        <span>Ativa</span>
-                      </label>
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        onClick={() => removeVariacao(v.uid)}
-                        aria-label={`Remover variação ${v.name || 'sem nome'}`}
-                      >
-                        <Icon name="trash" size={15} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </>
+            {errors.variantAxes && <span className="err">{errors.variantAxes}</span>}
+
+            <div className="axis__actions">
+              <button type="button" className="btn btn--outline btn--sm" onClick={addEixo}>
+                <Icon name="plus" size={15} /> Adicionar eixo
+              </button>
+              {combinacoesPrevistas > 0 && (
+                <button
+                  type="button"
+                  className="btn btn--primary btn--sm"
+                  onClick={gerar}
+                  disabled={combinacoesPrevistas > MAX_COMBINACOES}
+                >
+                  <Icon name="grid" size={15} /> Gerar grade ({combinacoesPrevistas})
+                </button>
+              )}
+            </div>
+
+            {combinacoesPrevistas > MAX_COMBINACOES && (
+              <span className="err">
+                Esta grade daria {combinacoesPrevistas} combinações, acima do limite de{' '}
+                {MAX_COMBINACOES}. Reduza as opções de algum eixo.
+              </span>
             )}
-
-            {errors.variants && <span className="err">{errors.variants}</span>}
-
-            <button type="button" className="btn btn--outline btn--sm" onClick={addVariacao}>
-              <Icon name="plus" size={15} /> Adicionar variação
-            </button>
           </div>
+
+          {f.variants.length > 0 && (
+            <div className={`field${errors.variants ? ' has-error' : ''}`}>
+              <span className="label">
+                Grade — {f.variants.length}{' '}
+                {f.variants.length === 1 ? 'combinação' : 'combinações'}
+              </span>
+              <p className="hint">
+                Preencha a primeira linha e use “repetir” para copiar o valor nas
+                demais.
+              </p>
+
+              <div className="vhead">
+                <span>Combinação</span>
+                <span>Código</span>
+                <span>Cód. barras</span>
+                <span>
+                  Preço{' '}
+                  <button type="button" className="linkish" onClick={() => replicar('price')}>
+                    repetir
+                  </button>
+                </span>
+                <span>
+                  Promo{' '}
+                  <button type="button" className="linkish" onClick={() => replicar('promo')}>
+                    repetir
+                  </button>
+                </span>
+                <span>
+                  Estoque{' '}
+                  <button type="button" className="linkish" onClick={() => replicar('stock')}>
+                    repetir
+                  </button>
+                </span>
+                <span />
+                <span />
+              </div>
+
+              <ul className="vlist">
+                {f.variants.map((v) => (
+                  <li key={v.uid} className="vrow">
+                    <strong className="vrow__combo">{v.name || '—'}</strong>
+                    <input
+                      className="input vrow__sku"
+                      value={v.sku}
+                      onChange={(e) => setVariacao(v.uid, 'sku', e.target.value)}
+                      placeholder="Código"
+                      aria-label={`Código de ${v.name}`}
+                    />
+                    <input
+                      className="input vrow__sku"
+                      value={v.gtin}
+                      onChange={(e) => setVariacao(v.uid, 'gtin', e.target.value.replace(/\D/g, ''))}
+                      placeholder="EAN"
+                      aria-label={`Código de barras de ${v.name}`}
+                    />
+                    <input
+                      className="input vrow__num"
+                      inputMode="decimal"
+                      value={v.price}
+                      onChange={(e) =>
+                        setVariacao(v.uid, 'price', e.target.value.replace(/[^\d,.]/g, ''))
+                      }
+                      placeholder="Preço"
+                      aria-label={`Preço de ${v.name}`}
+                    />
+                    <input
+                      className="input vrow__num"
+                      inputMode="decimal"
+                      value={v.promo}
+                      onChange={(e) =>
+                        setVariacao(v.uid, 'promo', e.target.value.replace(/[^\d,.]/g, ''))
+                      }
+                      placeholder="Promo"
+                      aria-label={`Promoção de ${v.name}`}
+                    />
+                    <input
+                      className="input vrow__num"
+                      inputMode="numeric"
+                      value={v.stock}
+                      onChange={(e) => setVariacao(v.uid, 'stock', e.target.value.replace(/\D/g, ''))}
+                      placeholder="Estoque"
+                      aria-label={`Estoque de ${v.name}`}
+                    />
+                    <label className="vrow__on" title="Disponível na loja">
+                      <input
+                        type="checkbox"
+                        checked={v.active !== false}
+                        onChange={(e) => setVariacao(v.uid, 'active', e.target.checked)}
+                      />
+                      <span>Ativa</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      onClick={() => removeVariacao(v.uid)}
+                      aria-label={`Remover ${v.name || 'combinação'}`}
+                    >
+                      <Icon name="trash" size={15} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              {errors.variants && <span className="err">{errors.variants}</span>}
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="pf-desc">Descrição</label>

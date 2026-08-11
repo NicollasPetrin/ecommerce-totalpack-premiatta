@@ -17,7 +17,10 @@ export const category = (r) => ({
 export const variant = (r) => ({
   id: r.id,
   name: r.name,
+  // Ponto da grade: { "Cor": "Azul", "Tamanho": "P" }.
+  options: r.options ?? {},
   sku: r.sku,
+  gtin: r.gtin ?? '',
   price: Number(r.price),
   promo: Number(r.promo),
   stock: r.stock,
@@ -45,7 +48,8 @@ export const product = (r) => ({
   lengthCm: Number(r.length_cm ?? 0),
   widthCm: Number(r.width_cm ?? 0),
   heightCm: Number(r.height_cm ?? 0),
-  variantLabel: r.variant_label ?? '',
+  // [{ name: 'Cor', options: ['Azul','Vermelho'] }, …]
+  variantAxes: r.variant_axes ?? [],
   variants: (r.variants ?? []).map(variant),
 })
 

@@ -13,7 +13,9 @@ export default function Product() {
   const navigate = useNavigate()
   const { productById, categoryById, products, addToCart, setCartOpen, settings } = useStore()
   const [qty, setQty] = useState(1)
-  const [variantId, setVariantId] = useState(null)
+  /* Escolha por eixo: { Cor: 'Azul', Tamanho: 'P' }. Null enquanto o cliente
+     não mexe, para o padrão poder ser recalculado se o produto mudar. */
+  const [escolhas, setEscolhas] = useState(null)
 
   const product = productById[id]
 
@@ -32,18 +34,36 @@ export default function Product() {
 
   const category = categoryById[product.categoryId]
 
-  /* Com variação, tudo que é preço e estoque passa a vir dela. A escolhida é
-     a primeira com estoque — abrir a página já num item esgotado obrigaria o
-     cliente a descobrir sozinho que precisa trocar. */
+  /* Com variação, tudo que é preço e estoque passa a vir dela. */
+  const eixos = product.variantAxes ?? []
   const variacoes = (product.variants ?? []).filter((v) => v.active)
-  const temVariacoes = variacoes.length > 0
-  const escolhida = temVariacoes
-    ? variacoes.find((v) => v.id === variantId) ??
-      variacoes.find((v) => v.stock > 0) ??
-      variacoes[0]
-    : null
+  const temVariacoes = eixos.length > 0 && variacoes.length > 0
 
-  const origem = escolhida ?? product
+  /* Ponto de partida: a primeira combinação com estoque. Abrir a página já
+     num item esgotado obrigaria o cliente a descobrir sozinho que precisa
+     trocar. */
+  const padrao = variacoes.find((v) => v.stock > 0) ?? variacoes[0]
+  const atuais = escolhas ?? padrao?.options ?? {}
+
+  const casa = (v, alvo) => eixos.every((a) => v.options?.[a.name] === alvo[a.name])
+  const escolhida = temVariacoes ? variacoes.find((v) => casa(v, atuais)) ?? null : null
+
+  /** Existe combinação para esta opção, mantendo o resto do que já foi escolhido? */
+  const disponivel = (eixo, opcao) =>
+    variacoes.some((v) => {
+      if (v.options?.[eixo] !== opcao) return false
+      return eixos.every((a) => a.name === eixo || v.options?.[a.name] === atuais[a.name])
+    })
+
+  const comEstoque = (eixo, opcao) =>
+    variacoes.some((v) => {
+      if (v.options?.[eixo] !== opcao || v.stock <= 0) return false
+      return eixos.every((a) => a.name === eixo || v.options?.[a.name] === atuais[a.name])
+    })
+
+  /* Combinação inexistente (grade incompleta) não tem preço nem estoque: cai
+     no produto pai só para a tela não quebrar, e o botão fica travado. */
+  const origem = escolhida ?? (temVariacoes ? { price: 0, promo: 0, stock: 0, sku: '' } : product)
   const price = effectivePrice(origem)
   const off = discountPct(origem.price, origem.promo)
   const out = origem.stock <= 0
@@ -102,38 +122,54 @@ export default function Product() {
 
           <p className="pdp__desc">{product.description}</p>
 
-          {temVariacoes && (
-            <div className="pdp__variants">
-              <span className="pdp__variants-label">
-                {product.variantLabel}: <strong>{escolhida?.name}</strong>
-              </span>
-              <div className="pdp__variants-list" role="radiogroup" aria-label={product.variantLabel}>
-                {variacoes.map((v) => {
-                  const semEstoque = v.stock <= 0
-                  return (
-                    <button
-                      key={v.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={v.id === escolhida?.id}
-                      className={`vopt${v.id === escolhida?.id ? ' is-on' : ''}${
-                        semEstoque ? ' is-out' : ''
-                      }`}
-                      onClick={() => {
-                        setVariantId(v.id)
-                        // A quantidade escolhida pode não caber na variação
-                        // nova; sem isto o botão de comprar ficaria travado.
-                        setQty((q) => Math.max(1, Math.min(q, v.stock || 1)))
-                      }}
-                    >
-                      {v.name}
-                      {semEstoque && <em>esgotado</em>}
-                    </button>
-                  )
-                })}
+          {temVariacoes &&
+            eixos.map((eixo) => (
+              <div className="pdp__variants" key={eixo.name}>
+                <span className="pdp__variants-label">
+                  {eixo.name}: <strong>{atuais[eixo.name] ?? '—'}</strong>
+                </span>
+                <div className="pdp__variants-list" role="radiogroup" aria-label={eixo.name}>
+                  {eixo.options.map((opcao) => {
+                    const existe = disponivel(eixo.name, opcao)
+                    const temEstoque = comEstoque(eixo.name, opcao)
+                    const marcada = atuais[eixo.name] === opcao
+                    return (
+                      <button
+                        key={opcao}
+                        type="button"
+                        role="radio"
+                        aria-checked={marcada}
+                        disabled={!existe}
+                        className={`vopt${marcada ? ' is-on' : ''}${
+                          existe && !temEstoque ? ' is-out' : ''
+                        }`}
+                        onClick={() => {
+                          const alvo = { ...atuais, [eixo.name]: opcao }
+                          /* Trocar um eixo pode deixar a combinação sem
+                             correspondente. Nesse caso puxamos a variação mais
+                             próxima que tenha esta opção, em vez de deixar o
+                             cliente num ponto vazio da grade. */
+                          const achou = variacoes.find((v) => casa(v, alvo))
+                          const proxima =
+                            achou ??
+                            variacoes.find(
+                              (v) => v.options?.[eixo.name] === opcao && v.stock > 0,
+                            ) ??
+                            variacoes.find((v) => v.options?.[eixo.name] === opcao)
+
+                          setEscolhas(proxima ? proxima.options : alvo)
+                          // A quantidade pode não caber na combinação nova.
+                          setQty((q) => Math.max(1, Math.min(q, proxima?.stock || 1)))
+                        }}
+                      >
+                        {opcao}
+                        {existe && !temEstoque && <em>esgotado</em>}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            ))}
 
           <div className="pdp__stock">
             {out ? (
