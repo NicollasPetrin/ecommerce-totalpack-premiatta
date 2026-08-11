@@ -129,10 +129,10 @@ export default function AdminProducts() {
             <thead>
               <tr>
                 <th>Produto</th>
-                <th>Categoria</th>
+                <th className="hide-sm hide-md">Categoria</th>
                 <th className="ta-right">Preço</th>
                 <th className="ta-right">Estoque</th>
-                <th>Status</th>
+                <th className="hide-sm">Status</th>
                 <th className="ta-right">Ações</th>
               </tr>
             </thead>
@@ -151,13 +151,13 @@ export default function AdminProducts() {
                           <span className="mono">{p.sku || '—'}</span>
                         </div>
                         {p.featured && (
-                          <span className="tag tag--blue" title="Aparece na home">
+                          <span className="tag tag--blue hide-sm hide-md" title="Aparece na home">
                             <Icon name="sparkles" size={12} /> Destaque
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="nowrap">{categoryById[p.categoryId]?.name ?? '—'}</td>
+                    <td className="nowrap hide-sm hide-md">{categoryById[p.categoryId]?.name ?? '—'}</td>
                     <td className="ta-right nowrap">
                       <strong>{money(effectivePrice(p))}</strong>
                       {p.promo > 0 && p.promo < p.price && (
@@ -169,7 +169,7 @@ export default function AdminProducts() {
                         {p.stock}
                       </span>
                     </td>
-                    <td>
+                    <td className="hide-sm">
                       <label className="switch switch--bare" title={p.active ? 'Ativo' : 'Inativo'}>
                         <input
                           type="checkbox"

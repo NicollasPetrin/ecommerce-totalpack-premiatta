@@ -421,11 +421,18 @@
   margin-top: 18px;
 }
 
+/* O marcador é pequeno de propósito, mas a área de toque não pode ser.
+   O padding cria os 44 px de alvo; `background-clip: content-box` mantém a
+   bolinha do tamanho visual desenhado. */
 .carousel__dot {
   width: 8px;
   height: 8px;
+  box-sizing: content-box;
+  padding: 18px 8px;
+  margin: -18px -8px;
   border-radius: 50%;
   background: var(--separator-strong);
+  background-clip: content-box;
   transition: background var(--dur-fast) var(--ease), width var(--dur) var(--ease);
 }
 
@@ -433,6 +440,7 @@
   width: 22px;
   border-radius: var(--r-full);
   background: var(--accent);
+  background-clip: content-box;
 }
 
 /* ==========================================================================
@@ -948,6 +956,7 @@
 
 .filters__range-labels strong { color: var(--label); }
 
+/* O trilho é fino, mas o controle recebe altura própria para o dedo acertar. */
 .range {
   -webkit-appearance: none;
   appearance: none;
@@ -956,6 +965,9 @@
   border-radius: 999px;
   background: var(--bg-sunken);
   outline: none;
+  padding-block: 20px;
+  margin-block: -20px;
+  background-clip: content-box;
 }
 
 .range::-webkit-slider-thumb {
@@ -2187,6 +2199,14 @@
   .checkout__grid { grid-template-columns: 1fr 320px; }
 }
 
+/* Tablet: o carrossel usava a largura mínima e ficava com itens miúdos no
+   meio de uma tela larga. Aqui eles crescem e as setas saem das bordas. */
+@media (min-width: 681px) and (max-width: 900px) {
+  .carousel__item { width: clamp(190px, 26vw, 230px); }
+  .carousel__nav--prev { left: 4px; }
+  .carousel__nav--next { right: 4px; }
+}
+
 @media (max-width: 900px) {
   .nav__links { display: none; }
   .nav__burger { display: inline-flex; }
@@ -2228,7 +2248,11 @@
 }
 
 @media (max-width: 680px) {
-  :root { --nav-h: 50px; }
+  /* Barra mais alta: os ícones passaram a 44 px e precisam caber. */
+  :root { --nav-h: 56px; }
+
+  .nav__search-input { font-size: 16px; min-height: 44px; }
+  .nav__search.is-open { max-height: 84px; }
 
   .grid--3,
   .grid--4 { grid-template-columns: repeat(2, 1fr); }

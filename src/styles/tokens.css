@@ -755,3 +755,60 @@ ol {
   font-size: var(--fs-callout);
   max-width: 34ch;
 }
+
+/* ==========================================================================
+   Toque
+
+   Em telas sem mouse, tudo que se clica precisa de pelo menos 44 px de área.
+   Vários controles são menores que isso no desenho — aqui a área cresce sem
+   mudar o peso visual.
+
+   Fica no fim do arquivo de propósito: as regras acima têm a mesma
+   especificidade, e no CSS a última vence.
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .btn--sm {
+    min-height: 44px;
+  }
+
+  .chip {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .segmented button {
+    min-height: 42px;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    /* 16 px evita o zoom automático do iOS ao focar um campo. */
+    font-size: 16px;
+    min-height: 46px;
+  }
+
+  .textarea {
+    min-height: 96px;
+  }
+
+  .stepper button {
+    width: 46px;
+    height: 46px;
+  }
+
+  .stepper input {
+    height: 46px;
+    font-size: 16px;
+  }
+
+  .stepper--sm button { width: 40px; height: 40px; }
+  .stepper--sm input { width: 34px; height: 40px; font-size: 15px; }
+}

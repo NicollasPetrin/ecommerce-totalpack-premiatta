@@ -76,12 +76,12 @@ export default function AdminCustomers() {
             <thead>
               <tr>
                 <th>Cliente</th>
-                <th>Contato</th>
-                <th className="ta-right">Endereços</th>
+                <th className="hide-sm">Contato</th>
+                <th className="ta-right hide-sm">Endereços</th>
                 <th className="ta-right">Pedidos</th>
-                <th>Último pedido</th>
+                <th className="hide-sm">Último pedido</th>
                 <th className="ta-right">Total gasto</th>
-                <th className="ta-right">Ações</th>
+                <th className="ta-right hide-sm">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -91,23 +91,23 @@ export default function AdminCustomers() {
                     <strong>{c.name}</strong>
                     <div className="cellsub">Desde {date(c.createdAt)}</div>
                   </td>
-                  <td>
+                  <td className="hide-sm">
                     {c.email}
                     <div className="cellsub">{c.phone}</div>
                   </td>
-                  <td className="ta-right">
+                  <td className="ta-right hide-sm">
                     <span className="tag tag--gray">{c.addresses?.length ?? 0}</span>
                   </td>
                   <td className="ta-right">
                     <span className="tag tag--gray">{c.orderCount}</span>
                   </td>
-                  <td className="nowrap">
+                  <td className="nowrap hide-sm">
                     {c.lastOrder ? date(c.lastOrder.createdAt) : <span className="hint">—</span>}
                   </td>
                   <td className="ta-right nowrap">
                     <strong>{money(c.spent)}</strong>
                   </td>
-                  <td className="ta-right nowrap" onClick={(e) => e.stopPropagation()}>
+                  <td className="ta-right nowrap hide-sm" onClick={(e) => e.stopPropagation()}>
                     <button
                       className="icon-btn"
                       onClick={() => setOpen(c.id)}

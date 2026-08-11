@@ -934,9 +934,81 @@
   .odetail__grid { grid-template-columns: 1fr; }
 }
 
+/* ==========================================================================
+   Painel no celular
+
+   Uma tabela de oito colunas não cabe em 375 px, e arrastar de lado para ler
+   um pedido é péssimo. As colunas secundárias saem de cena; o conteúdo delas
+   continua a um toque de distância, no detalhe que abre ao tocar na linha.
+   ========================================================================== */
+
+/* Aparece só no celular — par do .hide-sm. */
+.show-sm { display: none; }
+
+/* No tablet a tabela ainda estoura por poucos pixels; some a coluna
+   mais larga (Data) nessa faixa. */
+@media (max-width: 1000px) {
+  .hide-md { display: none !important; }
+  .table { width: 100%; }
+  /* O nome do produto é elástico e sozinho empurra a tabela. */
+  .cellprod strong {
+    display: block;
+    max-width: 34vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 760px) {
+  .hide-sm { display: none !important; }
+  .show-sm { display: block; }
+
+  .table thead th,
+  .table tbody td {
+    padding: 12px 10px;
+  }
+
+  /* Sem largura fixa: com menos colunas, o nome do produto usa o espaço. */
+  .cellprod strong { max-width: none; }
+  .cellprod { gap: 10px; }
+  .cellprod__art { width: 38px; height: 38px; }
+
+  .ellip { max-width: 140px; }
+
+  /* A tabela passa a caber na tela em vez de rolar de lado: as colunas se
+     ajustam ao espaço e o texto longo é cortado com reticências. */
+  .table { width: 100%; }
+
+  .table tbody td strong {
+    display: inline-block;
+    max-width: 30vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+
+  .table .mono { font-size: 11px; }
+
+  /* Dois botões de 40 px cabem; o respiro extra é que não. */
+  .table td.ta-right { padding-inline: 4px; }
+
+  /* Ações empilhadas ocupariam duas linhas; lado a lado cabem. */
+  .table td.ta-right .icon-btn { width: 40px; height: 40px; }
+}
+
 @media (max-width: 620px) {
   .kpis { grid-template-columns: 1fr; }
   .atoolbar .select,
   .asearch { min-width: 100%; }
-  .cellprod strong { max-width: 190px; }
+
+  .apage__head { gap: 12px; }
+  .apage__head .btn { width: 100%; }
+
+  /* A barra de abas rola; a sombra à direita avisa que há mais. */
+  .segmented--scroll {
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
 }

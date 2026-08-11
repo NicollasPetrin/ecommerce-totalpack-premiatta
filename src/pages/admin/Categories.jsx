@@ -46,7 +46,7 @@ export default function AdminCategories() {
               <tr>
                 <th style={{ width: 76 }}>Ordem</th>
                 <th>Categoria</th>
-                <th>Endereço</th>
+                <th className="hide-sm">Endereço</th>
                 <th className="ta-right">Produtos</th>
                 <th className="ta-right">Ações</th>
               </tr>
@@ -78,7 +78,7 @@ export default function AdminCategories() {
                     <strong>{c.name}</strong>
                     <div className="cellsub">{c.description || '—'}</div>
                   </td>
-                  <td className="mono nowrap">/catalogo?cat={c.slug}</td>
+                  <td className="mono nowrap hide-sm">/catalogo?cat={c.slug}</td>
                   <td className="ta-right">
                     <span className="tag tag--gray">{countOf(c.id)}</span>
                   </td>

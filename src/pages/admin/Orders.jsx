@@ -118,11 +118,13 @@ export default function AdminOrders() {
           <table className="table">
             <thead>
               <tr>
-                <th>Pedido</th>
+                {/* No celular ficam só as colunas que identificam o pedido —
+                    o resto aparece ao tocar na linha. */}
+                <th className="hide-sm">Pedido</th>
                 <th>Cliente</th>
-                <th>Data</th>
-                <th>Entrega</th>
-                <th>Pagamento</th>
+                <th className="hide-sm hide-md">Data</th>
+                <th className="hide-sm">Entrega</th>
+                <th className="hide-sm">Pagamento</th>
                 <th>Status</th>
                 <th className="ta-right">Total</th>
                 <th className="ta-right">Ações</th>
@@ -131,16 +133,18 @@ export default function AdminOrders() {
             <tbody>
               {list.map((o) => (
                 <tr key={o.id} className="is-clickable" onClick={() => setOpen(o.id)}>
-                  <td className="mono nowrap">{orderCode(o.seq, o.createdAt)}</td>
+                  <td className="mono nowrap hide-sm">{orderCode(o.seq, o.createdAt)}</td>
                   <td>
+                    {/* No celular o número entra aqui, liberando uma coluna. */}
+                    <div className="mono show-sm">{orderCode(o.seq, o.createdAt)}</div>
                     <strong>{o.customer.name}</strong>
-                    <div className="cellsub">{o.customer.phone}</div>
+                    <div className="cellsub hide-sm">{o.customer.phone}</div>
                   </td>
-                  <td className="nowrap">{dateTime(o.createdAt)}</td>
-                  <td className="nowrap">
+                  <td className="nowrap hide-sm hide-md">{dateTime(o.createdAt)}</td>
+                  <td className="nowrap hide-sm">
                     {o.delivery === 'retirada' ? 'Retirada' : 'Entrega'}
                   </td>
-                  <td className="nowrap">{PAYMENT_LABEL[o.payment]}</td>
+                  <td className="nowrap hide-sm">{PAYMENT_LABEL[o.payment]}</td>
                   <td>
                     <span className={`tag tag--${ORDER_STATUS[o.status].tone}`}>
                       {ORDER_STATUS[o.status].label}
@@ -150,8 +154,9 @@ export default function AdminOrders() {
                     <strong>{money(o.total)}</strong>
                   </td>
                   <td className="ta-right nowrap" onClick={(e) => e.stopPropagation()}>
+                    {/* No celular tocar na linha já abre o pedido. */}
                     <button
-                      className="icon-btn"
+                      className="icon-btn hide-sm"
                       onClick={() => setOpen(o.id)}
                       aria-label="Ver pedido"
                     >

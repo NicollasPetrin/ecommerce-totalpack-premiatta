@@ -71,9 +71,9 @@ export default function AdminShipping() {
               <thead>
                 <tr>
                   <th>Região</th>
-                  <th>Faixa de CEP</th>
+                  <th className="hide-sm">Faixa de CEP</th>
                   <th className="ta-right">Preço</th>
-                  <th className="ta-right">Prazo</th>
+                  <th className="ta-right hide-sm">Prazo</th>
                   <th>Atende</th>
                   <th className="ta-right">Ações</th>
                 </tr>
@@ -84,11 +84,11 @@ export default function AdminShipping() {
                     <td>
                       <strong>{z.name}</strong>
                     </td>
-                    <td className="mono nowrap">{zoneRange(z)}</td>
+                    <td className="mono nowrap hide-sm">{zoneRange(z)}</td>
                     <td className="ta-right nowrap">
                       <strong>{money(z.fee)}</strong>
                     </td>
-                    <td className="ta-right nowrap">{zoneDeadline(z)}</td>
+                    <td className="ta-right nowrap hide-sm">{zoneDeadline(z)}</td>
                     <td>
                       <label className="switch switch--bare">
                         <input
