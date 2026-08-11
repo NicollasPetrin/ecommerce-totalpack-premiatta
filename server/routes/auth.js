@@ -1,13 +1,16 @@
 import { Router } from 'express'
 import { many, one, transaction } from '../db/pool.js'
 import { wrap, conflict, unauthorized, badRequest } from '../lib/http.js'
-import { parse, schemas } from '../lib/validate.js'
+import { parse, schemas, validarUuid } from '../lib/validate.js'
 import {
   clearSession, hashPassword, requireCustomer, setSession, verifyPassword,
 } from '../lib/auth.js'
+import { limiteLogin } from '../lib/ratelimit.js'
 import * as s from '../lib/serialize.js'
 
 export const authRoutes = Router()
+
+authRoutes.param('id', validarUuid)
 
 /** Cliente com endereços, no formato que o front espera. */
 async function loadCustomer(id) {
@@ -25,6 +28,7 @@ async function loadCustomer(id) {
 
 authRoutes.post(
   '/signup',
+  limiteLogin,
   wrap(async (req, res) => {
     const data = parse(schemas.signup, req.body)
 
@@ -47,6 +51,7 @@ authRoutes.post(
 
 authRoutes.post(
   '/login',
+  limiteLogin,
   wrap(async (req, res) => {
     const { email, password } = parse(schemas.login, req.body)
 

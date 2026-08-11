@@ -1,11 +1,13 @@
 import { Router } from 'express'
 import { many, one, transaction } from '../db/pool.js'
 import { wrap, notFound, conflict } from '../lib/http.js'
-import { parse, schemas } from '../lib/validate.js'
+import { parse, schemas, validarUuid } from '../lib/validate.js'
 import { requireAdmin } from '../lib/auth.js'
 import * as s from '../lib/serialize.js'
 
 export const catalogRoutes = Router()
+
+catalogRoutes.param('id', validarUuid)
 
 /**
  * Produto com as suas variações embutidas.

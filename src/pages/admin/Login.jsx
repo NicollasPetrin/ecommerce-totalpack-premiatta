@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store/StoreContext'
+import { caminhoInterno } from '../../lib/rota'
 import Logo from '../../components/Logo'
 import Icon from '../../components/Icon'
 
@@ -14,7 +15,7 @@ export default function AdminLogin() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const from = location.state?.from ?? '/admin'
+  const from = caminhoInterno(location.state?.from, '/admin')
 
   if (isAdmin) return <Navigate to={from} replace />
 

@@ -1,14 +1,17 @@
 import { Router } from 'express'
 import { many, one } from '../db/pool.js'
 import { wrap, notFound, badRequest } from '../lib/http.js'
-import { parse, schemas } from '../lib/validate.js'
+import { parse, schemas, validarUuid } from '../lib/validate.js'
 import {
   clearSession, requireAdmin, setSession, verifyPassword, hashPassword,
 } from '../lib/auth.js'
 import { findOverlaps, findZone } from '../lib/shipping.js'
+import { limiteLogin } from '../lib/ratelimit.js'
 import * as s from '../lib/serialize.js'
 
 export const storeRoutes = Router()
+
+storeRoutes.param('id', validarUuid)
 
 /* -------------------------------------------------------------- Configurações */
 
@@ -147,6 +150,7 @@ storeRoutes.delete(
 
 storeRoutes.post(
   '/admin/login',
+  limiteLogin,
   wrap(async (req, res) => {
     const { email, password } = parse(schemas.login, req.body)
     const row = await one(`SELECT * FROM admins WHERE lower(email) = $1`, [email])

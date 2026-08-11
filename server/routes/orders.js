@@ -1,14 +1,18 @@
 import { Router } from 'express'
 import { many, one, transaction } from '../db/pool.js'
 import { wrap, badRequest, notFound, conflict } from '../lib/http.js'
-import { parse, schemas } from '../lib/validate.js'
+import { parse, schemas, validarUuid } from '../lib/validate.js'
 import { requireAdmin } from '../lib/auth.js'
 import { findZone, normalizeCep } from '../lib/shipping.js'
 import { createCharge, latestPayment, syncCharge } from '../lib/payments/service.js'
 import { restoreStock } from '../lib/stock.js'
+import { limitePedido, limiteExterno } from '../lib/ratelimit.js'
 import * as s from '../lib/serialize.js'
 
 export const orderRoutes = Router()
+
+// Vale para qualquer rota deste roteador que use :id.
+orderRoutes.param('id', validarUuid)
 
 /**
  * Carrega pedidos com itens e pagamento. Três consultas no total,
@@ -50,6 +54,7 @@ async function withItems(rows) {
 
 orderRoutes.post(
   '/',
+  limitePedido,
   wrap(async (req, res) => {
     const d = parse(schemas.order, req.body)
     const customerId = req.user?.role === 'customer' ? req.user.sub : null
@@ -343,6 +348,9 @@ orderRoutes.post(
  */
 orderRoutes.post(
   '/:id/sync-payment',
+  // Cada chamada aqui vira uma requisição à processadora; sem teto, qualquer
+  // um com o link de um pedido consome a cota da conta do Asaas.
+  limiteExterno,
   wrap(async (req, res) => {
     const row = await one(`SELECT * FROM orders WHERE id = $1`, [req.params.id])
     if (!row) throw notFound('Pedido não encontrado.')

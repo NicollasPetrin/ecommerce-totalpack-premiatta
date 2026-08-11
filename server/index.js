@@ -7,6 +7,8 @@ import cors from 'cors'
 import { config } from './config.js'
 import { pool } from './db/pool.js'
 import { readSession } from './lib/auth.js'
+import { securityHeaders } from './lib/security.js'
+import { limiteGeral } from './lib/ratelimit.js'
 import { errorHandler, notFound } from './lib/http.js'
 import { authRoutes } from './routes/auth.js'
 import { catalogRoutes } from './routes/catalog.js'
@@ -18,6 +20,10 @@ const app = express()
 
 app.disable('x-powered-by')
 app.set('trust proxy', 1)
+
+// Antes de tudo, inclusive dos webhooks: cabeçalho de segurança não depende
+// de rota e não deve poder ser esquecido em nenhuma delas.
+app.use(securityHeaders)
 
 /**
  * Webhooks vêm antes do express.json de propósito: a conferência de assinatura
@@ -40,6 +46,11 @@ app.use(
 )
 
 app.use(readSession)
+
+/* Teto geral da API. Fica depois dos webhooks de propósito: a processadora
+   pode mandar uma rajada de notificações legítimas, e barrá-la faria a loja
+   perder confirmação de pagamento. Aquela rota se defende pela assinatura. */
+app.use('/api', limiteGeral)
 
 app.get('/api/health', async (_req, res) => {
   try {

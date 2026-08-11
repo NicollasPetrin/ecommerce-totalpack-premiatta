@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
+import { caminhoInterno } from '../lib/rota'
 import { maskPhone } from '../lib/format'
 import Logo from '../components/Logo'
 import Icon from '../components/Icon'
@@ -17,7 +18,7 @@ export default function Auth() {
   const [show, setShow] = useState(false)
   const [sending, setSending] = useState(false)
 
-  const from = location.state?.from ?? '/conta'
+  const from = caminhoInterno(location.state?.from, '/conta')
 
   if (currentCustomer) return <Navigate to={from} replace />
 

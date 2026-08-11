@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { badRequest } from './http.js'
+import { badRequest, notFound } from './http.js'
 import { isValidDocument, onlyDigits } from './document.js'
 
 /** Valida o corpo da requisição e devolve o objeto já tipado. */
@@ -15,12 +15,52 @@ export function parse(schema, data) {
   return result.data
 }
 
+const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Confere que o `:id` da URL é mesmo um UUID antes de chegar ao banco.
+ *
+ * Sem isto, um id inventado vira erro de sintaxe do Postgres e volta como 500
+ * — não é falha de segurança, porque a consulta é parametrizada e nada é
+ * executado, mas enche o log de ruído e ainda deixa quem sonda a API
+ * distinguir "id malformado" de "id que não existe". Com a checagem, os dois
+ * respondem 404 igual.
+ */
+export function validarUuid(req, _res, next, valor) {
+  if (!RE_UUID.test(valor)) return next(notFound('Não encontrado.'))
+  next()
+}
+
 const cep = z
   .string()
   .transform((v) => v.replace(/\D/g, ''))
   .refine((v) => v.length === 8, 'CEP deve ter 8 dígitos.')
 
 const money = z.coerce.number().nonnegative('Valor não pode ser negativo.')
+
+/**
+ * Foto de produto.
+ *
+ * Antes o campo aceitava qualquer string e ela ia direto para o `src` de uma
+ * imagem. Isso deixava gravar `javascript:…` ou um data URI de HTML — hoje os
+ * navegadores não executam nada disso dentro de <img>, mas o dia em que
+ * alguém usar o mesmo valor num link ou num fundo CSS, vira falha. Aqui só
+ * passa data URI de formato de imagem conhecido.
+ *
+ * O teto de 1,5 MB acompanha o limite de 2 MB do corpo da requisição: sem
+ * ele, cada produto poderia carregar megabytes que todo visitante baixa.
+ */
+const MAX_IMAGEM = 1_500_000
+
+const imagem = z
+  .string()
+  .max(MAX_IMAGEM, 'Imagem muito grande. Use até 1,5 MB.')
+  .refine(
+    (v) => v === '' || /^data:image\/(png|jpe?g|webp|gif|avif);base64,[A-Za-z0-9+/=]+$/.test(v),
+    'Formato de imagem não aceito. Envie PNG, JPG, WebP, GIF ou AVIF.',
+  )
+  .nullable()
+  .default(null)
 
 /** CPF ou CNPJ com dígito verificador conferido. */
 const documento = z
@@ -33,7 +73,12 @@ export const schemas = {
     name: z.string().trim().min(3, 'Informe o nome completo.'),
     email: z.string().trim().toLowerCase().email('E-mail inválido.'),
     phone: z.string().trim().min(10, 'Telefone incompleto.'),
-    password: z.string().min(8, 'A senha precisa ter ao menos 8 caracteres.'),
+    password: z
+      .string()
+      .min(8, 'A senha precisa ter ao menos 8 caracteres.')
+      // Teto porque o bcrypt custa proporcional ao tamanho: uma senha de
+      // megabytes seria negacao de servico barata.
+      .max(200, 'Senha longa demais.'),
   }),
 
   login: z.object({
@@ -48,8 +93,11 @@ export const schemas = {
   }),
 
   passwordChange: z.object({
-    current: z.string().min(1, 'Informe a senha atual.'),
-    next: z.string().min(8, 'A nova senha precisa ter ao menos 8 caracteres.'),
+    current: z.string().min(1, 'Informe a senha atual.').max(200),
+    next: z
+      .string()
+      .min(8, 'A nova senha precisa ter ao menos 8 caracteres.')
+      .max(200, 'Senha longa demais.'),
   }),
 
   address: z.object({
@@ -83,7 +131,7 @@ export const schemas = {
       unit: z.string().trim().default('unidade'),
       art: z.string().trim().default('sheet'),
       tint: z.string().trim().default('#0071e3'),
-      image: z.string().nullable().default(null),
+      image: imagem,
       specs: z.array(z.string()).default([]),
       featured: z.boolean().default(false),
       active: z.boolean().default(true),
