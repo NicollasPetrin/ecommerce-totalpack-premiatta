@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../../store/StoreContext'
-import { slugify, uid } from '../../lib/format'
+import { slugify } from '../../lib/format'
 import Modal, { ConfirmDialog } from '../../components/Modal'
 import Icon from '../../components/Icon'
 
@@ -164,7 +164,8 @@ function CategoryForm({ value, onClose, onSave }) {
 
     onSave({
       ...f,
-      id: f.id || uid('cat'),
+      // Sem id em categoria nova: quem gera é o banco.
+      id: f.id || null,
       name: f.name.trim(),
       slug: slugify(f.slug || f.name),
       description: f.description.trim(),

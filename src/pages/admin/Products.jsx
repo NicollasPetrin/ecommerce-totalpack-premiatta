@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store/StoreContext'
-import { effectivePrice, money, norm, slugify, uid } from '../../lib/format'
+import { effectivePrice, money, norm, slugify } from '../../lib/format'
 import Modal, { ConfirmDialog } from '../../components/Modal'
 import ProductArt, { ART_KINDS, ART_LABELS } from '../../components/ProductArt'
 import Icon from '../../components/Icon'
@@ -306,7 +306,9 @@ function ProductForm({ value, categories, onClose, onSave }) {
 
     onSave({
       ...f,
-      id: f.id || uid('p'),
+      // Sem id em produto novo: quem gera é o banco. Preencher aqui faria o
+      // contexto tratar o cadastro como edição de algo que não existe.
+      id: f.id || null,
       name: f.name.trim(),
       sku: (
         f.sku ||

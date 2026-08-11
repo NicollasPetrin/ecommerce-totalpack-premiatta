@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../../store/StoreContext'
-import { money, uid } from '../../lib/format'
+import { money } from '../../lib/format'
 import {
   findOverlap,
   findZone,
@@ -303,7 +303,8 @@ function ZoneForm({ value, zones, onClose, onSave }) {
 
     onSave({
       ...f,
-      id: f.id || uid('z'),
+      // Sem id em região nova: quem gera é o banco.
+      id: f.id || null,
       name: f.name.trim(),
       cepStart: start,
       cepEnd: end,
