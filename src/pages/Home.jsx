@@ -30,6 +30,11 @@ export default function Home() {
     ...live.filter((p) => !p.featured && p.promo > 0 && p.promo < p.price),
   ].slice(0, 8)
 
+  /* Prateleira própria para as ofertas, como fazem os atacados de papelaria.
+     Some sozinha quando não há promoção — seção vazia é pior que seção
+     nenhuma. */
+  const promos = live.filter((p) => p.promo > 0 && p.promo < p.price).slice(0, 4)
+
   const mailLink = `mailto:${settings.email}?subject=${encodeURIComponent(
     'Ajuda com um pedido de material escolar',
   )}`
@@ -102,6 +107,20 @@ export default function Home() {
         </div>
       </section>
 
+      {/* --------------------------------------------------------- Promoções */}
+      {promos.length > 0 && (
+        <section className="wrap section">
+          <h2 className="simple-title">Promoções da semana</h2>
+          <p className="simple-sub">Preço menor enquanto durar o estoque.</p>
+
+          <div className="grid grid--4">
+            {promos.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ------------------------------------------------------ Como comprar */}
       <section className="wrap section">
         <h2 className="simple-title">Como comprar</h2>
@@ -112,7 +131,7 @@ export default function Home() {
             <span className="steps__num">1</span>
             <h3>Escolha os produtos</h3>
             <p>
-              Em cada produto, toque no botão azul <strong>Adicionar à sacola</strong>.
+              Em cada produto, toque no botão vermelho <strong>Adicionar à sacola</strong>.
               Você pode escolher quantos quiser.
             </p>
           </li>
@@ -126,11 +145,11 @@ export default function Home() {
           </li>
           <li>
             <span className="steps__num">3</span>
-            <h3>Informe seus dados</h3>
+            <h3>Pague e pronto</h3>
             <p>
-              Preencha nome, telefone e endereço. Nós entramos em contato para
-              confirmar o pagamento e a entrega.{' '}
-              <strong>Nenhum dado de cartão é digitado aqui.</strong>
+              Preencha nome, telefone e endereço. Em seguida você vai direto
+              para o pagamento: Pix, boleto ou cartão.{' '}
+              <strong>Os dados do cartão não passam pela nossa loja.</strong>
             </p>
           </li>
         </ol>

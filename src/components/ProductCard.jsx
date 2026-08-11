@@ -17,6 +17,7 @@ export default function ProductCard({ product }) {
         <ProductArt product={product} className="pcard__art" />
         {off > 0 && !out && <span className="pcard__badge">−{off}%</span>}
         {out && <span className="pcard__badge pcard__badge--muted">Esgotado</span>}
+        {low && <span className="pcard__badge pcard__badge--warn">Últimas {product.stock}</span>}
       </Link>
 
       <div className="pcard__body">
@@ -24,10 +25,13 @@ export default function ProductCard({ product }) {
           <Link to={`/produto/${product.id}`}>{product.name}</Link>
         </h3>
 
-        <p className="pcard__unit">
-          por {product.unit}
-          {low && <span className="pcard__low"> · últimas {product.stock} un.</span>}
-        </p>
+        {/* Como no atacado de papelaria: a embalagem é o dado que decide a
+            compra (uma resma não é uma folha), então vira etiqueta, não
+            texto miúdo. O código ajuda quem confere pedido por telefone. */}
+        <div className="pcard__meta">
+          <span className="pcard__unit">{product.unit}</span>
+          {product.sku && <span className="pcard__sku">{product.sku}</span>}
+        </div>
 
         <div className="pcard__price">
           <strong>{money(price)}</strong>

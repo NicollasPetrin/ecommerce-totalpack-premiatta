@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 
 import Header from './components/Header'
+import CategoryStrip from './components/CategoryStrip'
 import Footer from './components/Footer'
 import CartDrawer from './components/CartDrawer'
 import Toaster from './components/Toaster'
@@ -72,6 +73,7 @@ function StoreLayout() {
   return (
     <div className="shell">
       <Header />
+      <CategoryStrip />
       <main className="shell__main">
         <Outlet />
       </main>
