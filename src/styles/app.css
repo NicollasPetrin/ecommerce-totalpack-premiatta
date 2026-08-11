@@ -307,6 +307,179 @@
 }
 
 /* ==========================================================================
+   Faixa de destaques (topo da home)
+
+   Painéis de cantos redondos com a foto do produto sobre fundo colorido, no
+   formato dos banners de papelaria. A cor de cada painel vem do próprio
+   produto (--tint), então a faixa acompanha o catálogo sem arte fixa.
+   ========================================================================== */
+
+.hbanner {
+  position: relative;
+  padding: 18px 0 6px;
+}
+
+.hbanner__track {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-inline: var(--gutter);
+  /* Casa com o padding: é o que faz o painel parar dentro da margem. */
+  scroll-padding-inline: var(--gutter);
+  max-width: var(--page);
+  margin-inline: auto;
+  scrollbar-width: none;
+}
+
+.hbanner__track::-webkit-scrollbar { display: none; }
+
+/* Dois painéis por vez, como na referência. O 20px do gap é descontado pela
+   metade em cada um, senão o segundo painel fica cortado. */
+.hbanner__slide {
+  flex: 0 0 calc(50% - 10px);
+  scroll-snap-align: start;
+}
+
+.hbanner__panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%;
+  aspect-ratio: 3 / 2;
+  padding: clamp(18px, 3vw, 34px);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  color: var(--label);
+  background: color-mix(in srgb, var(--tint) 20%, var(--bg-elevated));
+  transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease);
+}
+
+.hbanner__panel:hover {
+  text-decoration: none;
+  transform: translateY(-3px);
+  box-shadow: var(--sh-3);
+}
+
+.hbanner__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  flex: 1 1 46%;
+  min-width: 0;
+}
+
+/* Letra vazada, a assinatura visual da referência. */
+.hbanner__kicker {
+  font-size: clamp(15px, 2.6vw, 30px);
+  font-weight: 800;
+  font-style: normal;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  color: transparent;
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--tint) 70%, var(--label));
+}
+
+.hbanner__name {
+  font-size: clamp(15px, 1.9vw, 23px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: var(--tracking-tight);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hbanner__price {
+  font-size: clamp(14px, 1.6vw, 19px);
+  font-weight: 700;
+  color: color-mix(in srgb, var(--tint) 65%, var(--label));
+}
+
+.hbanner__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 9px 15px;
+  min-height: 40px;
+  border-radius: var(--r-full);
+  background: var(--label);
+  color: var(--bg-elevated);
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+}
+
+.hbanner__shot {
+  flex: 1 1 54%;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+}
+
+.hbanner__shot svg,
+.hbanner__shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.hbanner__nav {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--material-bar);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--separator);
+  color: var(--label);
+  box-shadow: var(--sh-2);
+}
+
+.hbanner__nav--prev { left: calc(var(--gutter) - 22px); }
+.hbanner__nav--next { right: calc(var(--gutter) - 22px); }
+
+.hbanner__dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* O ponto é pequeno de propósito, mas a área de toque não: o padding cria os
+   44px e a margem negativa devolve o espaço ao layout. */
+.hbanner__dot {
+  width: 8px;
+  height: 8px;
+  box-sizing: content-box;
+  padding: 18px 8px;
+  margin: -18px -8px;
+  border-radius: 50%;
+  background: var(--label-4);
+  background-clip: content-box;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.hbanner__dot.is-on { background: var(--accent); background-clip: content-box; }
+
+@media (max-width: 900px) {
+  /* Um painel por vez: dois lado a lado deixariam a foto ilegível. */
+  .hbanner__slide { flex: 0 0 100%; }
+  .hbanner__panel { aspect-ratio: 16 / 10; }
+  .hbanner__nav { display: none; }
+}
+
+/* ==========================================================================
    Abertura da página inicial
 
    Uma frase, dois botões grandes e a informação de entrega. Nada de textos

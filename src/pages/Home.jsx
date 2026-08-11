@@ -4,6 +4,7 @@ import { money } from '../lib/format'
 import ProductCard from '../components/ProductCard'
 import ProductArt from '../components/ProductArt'
 import HeroCarousel from '../components/HeroCarousel'
+import HeroBanner from '../components/HeroBanner'
 import Logo from '../components/Logo'
 import Icon from '../components/Icon'
 
@@ -41,6 +42,9 @@ export default function Home() {
 
   return (
     <>
+      {/* -------------------------------------------------- Faixa de destaques */}
+      <HeroBanner products={carouselItems} />
+
       {/* ------------------------------------------------------------ Abertura */}
       <section className="open">
         <div className="wrap open__inner">
