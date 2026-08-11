@@ -28,6 +28,27 @@ const blank = (categoryId) => ({
   active: true,
   description: '',
   specs: [],
+  // Medidas do pacote, exigidas pela transportadora para emitir a etiqueta.
+  weightG: '',
+  lengthCm: '',
+  widthCm: '',
+  heightCm: '',
+  variantLabel: '',
+  variants: [],
+})
+
+/** Linha nova do editor de variações. */
+const variacaoVazia = () => ({
+  id: null,
+  // Chave só do formulário: a variação ainda não tem id do banco, e usar o
+  // índice faria o React embaralhar os campos ao remover uma linha do meio.
+  uid: Math.random().toString(36).slice(2),
+  name: '',
+  sku: '',
+  price: '',
+  promo: '',
+  stock: '',
+  active: true,
 })
 
 export default function AdminProducts() {
@@ -258,6 +279,18 @@ function ProductForm({ value, categories, onClose, onSave }) {
     price: value.price === '' ? '' : String(value.price),
     promo: value.promo ? String(value.promo) : '',
     stock: value.stock === '' ? '' : String(value.stock),
+    weightG: value.weightG ? String(value.weightG) : '',
+    lengthCm: value.lengthCm ? String(value.lengthCm) : '',
+    widthCm: value.widthCm ? String(value.widthCm) : '',
+    heightCm: value.heightCm ? String(value.heightCm) : '',
+    variantLabel: value.variantLabel ?? '',
+    variants: (value.variants ?? []).map((v) => ({
+      ...v,
+      uid: v.id ?? Math.random().toString(36).slice(2),
+      price: v.price === '' ? '' : String(v.price),
+      promo: v.promo ? String(v.promo) : '',
+      stock: v.stock === '' ? '' : String(v.stock),
+    })),
   })
   const [errors, setErrors] = useState({})
   const [specDraft, setSpecDraft] = useState('')
@@ -287,6 +320,21 @@ function ProductForm({ value, categories, onClose, onSave }) {
     setSpecDraft('')
   }
 
+  /* ---- Variações ---- */
+  const setVariacao = (uid, campo, v) => {
+    setF((old) => ({
+      ...old,
+      variants: old.variants.map((x) => (x.uid === uid ? { ...x, [campo]: v } : x)),
+    }))
+    setErrors((e) => ({ ...e, variants: undefined }))
+  }
+
+  const addVariacao = () =>
+    setF((old) => ({ ...old, variants: [...old.variants, variacaoVazia()] }))
+
+  const removeVariacao = (uid) =>
+    setF((old) => ({ ...old, variants: old.variants.filter((x) => x.uid !== uid) }))
+
   const submit = (e) => {
     e.preventDefault()
     const err = {}
@@ -301,8 +349,37 @@ function ProductForm({ value, categories, onClose, onSave }) {
     if (promo > 0 && promo >= price) err.promo = 'A promoção deve ser menor que o preço.'
     if (!Number.isFinite(stock) || stock < 0) err.stock = 'Estoque inválido.'
 
+    const variacoes = f.variants.map((v) => ({
+      id: v.id || null,
+      name: v.name.trim(),
+      sku: v.sku.trim(),
+      price: Number(String(v.price).replace(',', '.')),
+      promo: v.promo === '' ? 0 : Number(String(v.promo).replace(',', '.')),
+      stock: Number(v.stock),
+      active: v.active !== false,
+    }))
+
+    if (variacoes.length > 0) {
+      if (!f.variantLabel.trim()) {
+        err.variantLabel = 'Dê um nome ao tipo de variação (ex.: Cor, Tamanho).'
+      }
+      if (variacoes.some((v) => !v.name)) err.variants = 'Toda variação precisa de nome.'
+      else if (variacoes.some((v) => !(v.price > 0))) {
+        err.variants = 'Toda variação precisa de preço maior que zero.'
+      } else if (variacoes.some((v) => v.promo > 0 && v.promo >= v.price)) {
+        err.variants = 'A promoção de uma variação está maior que o preço dela.'
+      } else if (variacoes.some((v) => !Number.isFinite(v.stock) || v.stock < 0)) {
+        err.variants = 'Há variação com estoque inválido.'
+      } else {
+        const nomes = variacoes.map((v) => v.name.toLowerCase())
+        if (new Set(nomes).size !== nomes.length) err.variants = 'Há variações com o mesmo nome.'
+      }
+    }
+
     setErrors(err)
     if (Object.keys(err).length) return
+
+    const medida = (v) => (v === '' ? 0 : Number(String(v).replace(',', '.')))
 
     onSave({
       ...f,
@@ -319,6 +396,12 @@ function ProductForm({ value, categories, onClose, onSave }) {
       stock,
       description: f.description.trim(),
       specs: f.specs ?? [],
+      weightG: f.weightG === '' ? 0 : Number(f.weightG),
+      lengthCm: medida(f.lengthCm),
+      widthCm: medida(f.widthCm),
+      heightCm: medida(f.heightCm),
+      variantLabel: f.variantLabel.trim(),
+      variants: variacoes,
     })
   }
 
@@ -474,6 +557,160 @@ function ProductForm({ value, categories, onClose, onSave }) {
                 placeholder="resma, folha, caixa…"
               />
             </div>
+          </div>
+
+          {/* Medidas do pacote — o que a transportadora exige na etiqueta */}
+          <div className="field">
+            <span className="label">Peso e medidas do pacote</span>
+            <p className="hint">
+              Usados para calcular o frete e emitir a etiqueta. Pode deixar em branco
+              agora: o produto vende normalmente, só não gera etiqueta.
+            </p>
+            <div className="form-grid form-grid--4">
+              <div className="field">
+                <label htmlFor="pf-weight">Peso (g)</label>
+                <input
+                  id="pf-weight"
+                  className="input"
+                  inputMode="numeric"
+                  value={f.weightG}
+                  onChange={(e) => set('weightG', e.target.value.replace(/\D/g, ''))}
+                  placeholder="500"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="pf-len">Comprimento (cm)</label>
+                <input
+                  id="pf-len"
+                  className="input"
+                  inputMode="decimal"
+                  value={f.lengthCm}
+                  onChange={(e) => set('lengthCm', e.target.value.replace(/[^\d,.]/g, ''))}
+                  placeholder="30"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="pf-wid">Largura (cm)</label>
+                <input
+                  id="pf-wid"
+                  className="input"
+                  inputMode="decimal"
+                  value={f.widthCm}
+                  onChange={(e) => set('widthCm', e.target.value.replace(/[^\d,.]/g, ''))}
+                  placeholder="21"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="pf-hei">Altura (cm)</label>
+                <input
+                  id="pf-hei"
+                  className="input"
+                  inputMode="decimal"
+                  value={f.heightCm}
+                  onChange={(e) => set('heightCm', e.target.value.replace(/[^\d,.]/g, ''))}
+                  placeholder="5"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Variações */}
+          <div className={`field${errors.variants || errors.variantLabel ? ' has-error' : ''}`}>
+            <span className="label">Variações</span>
+            <p className="hint">
+              Use quando o mesmo produto tem opções com preço ou estoque próprios —
+              colorset por cor, caderno por número de folhas. Sem variação, o produto
+              usa o preço e o estoque preenchidos acima.
+            </p>
+
+            {f.variants.length > 0 && (
+              <>
+                <div className="field">
+                  <label htmlFor="pf-vlabel">O que muda entre as opções? *</label>
+                  <input
+                    id="pf-vlabel"
+                    className="input"
+                    value={f.variantLabel}
+                    onChange={(e) => set('variantLabel', e.target.value)}
+                    placeholder="Cor, Tamanho, Gramatura…"
+                  />
+                  {errors.variantLabel && <span className="err">{errors.variantLabel}</span>}
+                </div>
+
+                <ul className="vlist">
+                  {f.variants.map((v) => (
+                    <li key={v.uid} className="vrow">
+                      <input
+                        className="input vrow__name"
+                        value={v.name}
+                        onChange={(e) => setVariacao(v.uid, 'name', e.target.value)}
+                        placeholder="Azul"
+                        aria-label="Nome da variação"
+                      />
+                      <input
+                        className="input vrow__sku"
+                        value={v.sku}
+                        onChange={(e) => setVariacao(v.uid, 'sku', e.target.value)}
+                        placeholder="Código"
+                        aria-label="Código da variação"
+                      />
+                      <input
+                        className="input vrow__num"
+                        inputMode="decimal"
+                        value={v.price}
+                        onChange={(e) =>
+                          setVariacao(v.uid, 'price', e.target.value.replace(/[^\d,.]/g, ''))
+                        }
+                        placeholder="Preço"
+                        aria-label="Preço da variação"
+                      />
+                      <input
+                        className="input vrow__num"
+                        inputMode="decimal"
+                        value={v.promo}
+                        onChange={(e) =>
+                          setVariacao(v.uid, 'promo', e.target.value.replace(/[^\d,.]/g, ''))
+                        }
+                        placeholder="Promo"
+                        aria-label="Preço promocional da variação"
+                      />
+                      <input
+                        className="input vrow__num"
+                        inputMode="numeric"
+                        value={v.stock}
+                        onChange={(e) =>
+                          setVariacao(v.uid, 'stock', e.target.value.replace(/\D/g, ''))
+                        }
+                        placeholder="Estoque"
+                        aria-label="Estoque da variação"
+                      />
+                      <label className="vrow__on" title="Disponível na loja">
+                        <input
+                          type="checkbox"
+                          checked={v.active !== false}
+                          onChange={(e) => setVariacao(v.uid, 'active', e.target.checked)}
+                        />
+                        <span>Ativa</span>
+                      </label>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => removeVariacao(v.uid)}
+                        aria-label={`Remover variação ${v.name || 'sem nome'}`}
+                      >
+                        <Icon name="trash" size={15} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {errors.variants && <span className="err">{errors.variants}</span>}
+
+            <button type="button" className="btn btn--outline btn--sm" onClick={addVariacao}>
+              <Icon name="plus" size={15} /> Adicionar variação
+            </button>
           </div>
 
           <div className="field">

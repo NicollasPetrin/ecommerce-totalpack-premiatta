@@ -14,6 +14,16 @@ export const category = (r) => ({
   order: r.position,
 })
 
+export const variant = (r) => ({
+  id: r.id,
+  name: r.name,
+  sku: r.sku,
+  price: Number(r.price),
+  promo: Number(r.promo),
+  stock: r.stock,
+  active: r.active,
+})
+
 export const product = (r) => ({
   id: r.id,
   categoryId: r.category_id,
@@ -30,6 +40,13 @@ export const product = (r) => ({
   specs: r.specs ?? [],
   featured: r.featured,
   active: r.active,
+  // Medidas do pacote, para a etiqueta de envio.
+  weightG: Number(r.weight_g ?? 0),
+  lengthCm: Number(r.length_cm ?? 0),
+  widthCm: Number(r.width_cm ?? 0),
+  heightCm: Number(r.height_cm ?? 0),
+  variantLabel: r.variant_label ?? '',
+  variants: (r.variants ?? []).map(variant),
 })
 
 export const address = (r) => ({
@@ -68,6 +85,8 @@ export const zone = (r) => ({
 
 export const orderItem = (r) => ({
   productId: r.product_id,
+  variantId: r.variant_id ?? null,
+  variantName: r.variant_name ?? '',
   name: r.name,
   sku: r.sku,
   art: r.art,

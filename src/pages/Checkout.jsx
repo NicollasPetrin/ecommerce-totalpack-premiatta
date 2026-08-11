@@ -543,12 +543,15 @@ export default function Checkout() {
 
             <ul className="summary__items">
               {cartLines.map((l) => (
-                <li key={l.productId}>
+                <li key={l.key}>
                   <span className="summary__art">
                     <ProductArt product={l.product} />
                     <em>{l.qty}</em>
                   </span>
-                  <span className="summary__name">{l.product.name}</span>
+                  <span className="summary__name">
+                    {l.product.name}
+                    {l.variant && <em className="summary__variant">{l.variant.name}</em>}
+                  </span>
                   <strong>{money(l.lineTotal)}</strong>
                 </li>
               ))}

@@ -21,13 +21,23 @@ export async function restoreStock(client, orderId) {
 
   if (!rows.length) return { restored: false, reason: 'estoque já devolvido' }
 
-  const { rowCount } = await client.query(
+  // Item com variação baixou o estoque da variação, não o do produto: a
+  // devolução precisa seguir o mesmo caminho, senão o saldo desencontra.
+  const { rowCount: devolvidosAoProduto } = await client.query(
     `UPDATE products p
         SET stock = p.stock + i.qty
        FROM order_items i
-      WHERE i.order_id = $1 AND i.product_id = p.id`,
+      WHERE i.order_id = $1 AND i.product_id = p.id AND i.variant_id IS NULL`,
     [orderId],
   )
 
-  return { restored: true, items: rowCount }
+  const { rowCount: devolvidosAVariacao } = await client.query(
+    `UPDATE product_variants v
+        SET stock = v.stock + i.qty
+       FROM order_items i
+      WHERE i.order_id = $1 AND i.variant_id = v.id`,
+    [orderId],
+  )
+
+  return { restored: true, items: devolvidosAoProduto + devolvidosAVariacao }
 }

@@ -1,11 +1,68 @@
 import { Router } from 'express'
-import { many, one } from '../db/pool.js'
+import { many, one, transaction } from '../db/pool.js'
 import { wrap, notFound, conflict } from '../lib/http.js'
 import { parse, schemas } from '../lib/validate.js'
 import { requireAdmin } from '../lib/auth.js'
 import * as s from '../lib/serialize.js'
 
 export const catalogRoutes = Router()
+
+/**
+ * Produto com as suas variações embutidas.
+ *
+ * O `$1` é a flag de admin: o visitante só enxerga variação ativa, do mesmo
+ * jeito que só enxerga produto ativo. O LATERAL evita repetir a linha do
+ * produto uma vez por variação, que é o que um JOIN comum faria.
+ */
+const COM_VARIACOES = `
+  SELECT p.*, COALESCE(v.variants, '[]'::json) AS variants
+    FROM products p
+    LEFT JOIN LATERAL (
+      SELECT json_agg(x ORDER BY x.position, x.name) AS variants
+        FROM product_variants x
+       WHERE x.product_id = p.id AND ($1::boolean OR x.active)
+    ) v ON true`
+
+/**
+ * Grava a lista de variações de um produto.
+ *
+ * As que já existiam são atualizadas pelo id em vez de apagadas e recriadas:
+ * os itens de pedido apontam para elas, e recriar quebraria esse vínculo com
+ * o histórico. O que sumiu da lista é removido de fato.
+ */
+async function salvarVariacoes(client, productId, variantes) {
+  const manter = variantes.map((v) => v.id).filter(Boolean)
+
+  await client.query(
+    `DELETE FROM product_variants
+      WHERE product_id = $1 AND NOT (id = ANY($2::uuid[]))`,
+    [productId, manter],
+  )
+
+  for (const [i, v] of variantes.entries()) {
+    if (v.id) {
+      await client.query(
+        `UPDATE product_variants
+            SET name=$1, sku=$2, price=$3, promo=$4, stock=$5, active=$6, position=$7
+          WHERE id=$8 AND product_id=$9`,
+        [v.name, v.sku, v.price, v.promo, v.stock, v.active, i, v.id, productId],
+      )
+    } else {
+      await client.query(
+        `INSERT INTO product_variants
+           (product_id, name, sku, price, promo, stock, active, position)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [productId, v.name, v.sku, v.price, v.promo, v.stock, v.active, i],
+      )
+    }
+  }
+
+  const { rows } = await client.query(
+    `SELECT * FROM product_variants WHERE product_id = $1 ORDER BY position, name`,
+    [productId],
+  )
+  return rows
+}
 
 /* ======================================================== Público (leitura) */
 
@@ -26,9 +83,9 @@ catalogRoutes.get(
   wrap(async (req, res) => {
     const isAdmin = req.user?.role === 'admin'
     const rows = await many(
-      `SELECT * FROM products
-        WHERE ($1::boolean OR active)
-        ORDER BY featured DESC, name`,
+      `${COM_VARIACOES}
+        WHERE ($1::boolean OR p.active)
+        ORDER BY p.featured DESC, p.name`,
       [isAdmin],
     )
     res.json({ products: rows.map(s.product) })
@@ -40,8 +97,8 @@ catalogRoutes.get(
   wrap(async (req, res) => {
     const isAdmin = req.user?.role === 'admin'
     const row = await one(
-      `SELECT * FROM products WHERE id = $1 AND ($2::boolean OR active)`,
-      [req.params.id, isAdmin],
+      `${COM_VARIACOES} WHERE p.id = $2 AND ($1::boolean OR p.active)`,
+      [isAdmin, req.params.id],
     )
     if (!row) throw notFound('Produto não encontrado.')
     res.json({ product: s.product(row) })
@@ -104,17 +161,25 @@ catalogRoutes.post(
   requireAdmin,
   wrap(async (req, res) => {
     const d = parse(schemas.product, req.body)
-    const row = await one(
-      `INSERT INTO products
-         (category_id, name, sku, description, price, promo, stock, unit,
-          art, tint, image, specs, featured, active)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14)
-       RETURNING *`,
-      [
-        d.categoryId, d.name, d.sku, d.description, d.price, d.promo, d.stock,
-        d.unit, d.art, d.tint, d.image, JSON.stringify(d.specs), d.featured, d.active,
-      ],
-    )
+    const row = await transaction(async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO products
+           (category_id, name, sku, description, price, promo, stock, unit,
+            art, tint, image, specs, featured, active,
+            weight_g, length_cm, width_cm, height_cm, variant_label)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,
+                 $15,$16,$17,$18,$19)
+         RETURNING *`,
+        [
+          d.categoryId, d.name, d.sku, d.description, d.price, d.promo, d.stock,
+          d.unit, d.art, d.tint, d.image, JSON.stringify(d.specs), d.featured, d.active,
+          d.weightG, d.lengthCm, d.widthCm, d.heightCm, d.variantLabel,
+        ],
+      )
+      const produto = rows[0]
+      produto.variants = await salvarVariacoes(client, produto.id, d.variants)
+      return produto
+    })
     res.status(201).json({ product: s.product(row) })
   }),
 )
@@ -124,18 +189,27 @@ catalogRoutes.put(
   requireAdmin,
   wrap(async (req, res) => {
     const d = parse(schemas.product, req.body)
-    const row = await one(
-      `UPDATE products SET
-         category_id=$1, name=$2, sku=$3, description=$4, price=$5, promo=$6,
-         stock=$7, unit=$8, art=$9, tint=$10, image=$11, specs=$12::jsonb,
-         featured=$13, active=$14
-       WHERE id=$15 RETURNING *`,
-      [
-        d.categoryId, d.name, d.sku, d.description, d.price, d.promo, d.stock,
-        d.unit, d.art, d.tint, d.image, JSON.stringify(d.specs), d.featured,
-        d.active, req.params.id,
-      ],
-    )
+    const row = await transaction(async (client) => {
+      const { rows } = await client.query(
+        `UPDATE products SET
+           category_id=$1, name=$2, sku=$3, description=$4, price=$5, promo=$6,
+           stock=$7, unit=$8, art=$9, tint=$10, image=$11, specs=$12::jsonb,
+           featured=$13, active=$14,
+           weight_g=$15, length_cm=$16, width_cm=$17, height_cm=$18,
+           variant_label=$19
+         WHERE id=$20 RETURNING *`,
+        [
+          d.categoryId, d.name, d.sku, d.description, d.price, d.promo, d.stock,
+          d.unit, d.art, d.tint, d.image, JSON.stringify(d.specs), d.featured,
+          d.active, d.weightG, d.lengthCm, d.widthCm, d.heightCm, d.variantLabel,
+          req.params.id,
+        ],
+      )
+      const produto = rows[0]
+      if (!produto) return null
+      produto.variants = await salvarVariacoes(client, produto.id, d.variants)
+      return produto
+    })
     if (!row) throw notFound('Produto não encontrado.')
     res.json({ product: s.product(row) })
   }),

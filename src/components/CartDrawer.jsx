@@ -89,7 +89,7 @@ export default function CartDrawer() {
 
             <ul className="drawer__list">
               {cartLines.map((l) => (
-                <li key={l.productId} className="cline">
+                <li key={l.key} className="cline">
                   <Link
                     to={`/produto/${l.productId}`}
                     className="cline__media"
@@ -106,13 +106,18 @@ export default function CartDrawer() {
                     >
                       {l.product.name}
                     </Link>
+                    {l.variant && (
+                      <span className="cline__variant">
+                        {l.product.variantLabel}: {l.variant.name}
+                      </span>
+                    )}
                     <span className="cline__unit">{money(l.price)} / {l.product.unit}</span>
 
                     <div className="cline__foot">
                       <QtyStepper
                         value={l.qty}
-                        onChange={(v) => setQty(l.productId, v)}
-                        max={l.product.stock}
+                        onChange={(v) => setQty(l.key, v)}
+                        max={l.stock}
                         size="sm"
                       />
                       <strong className="cline__total">{money(l.lineTotal)}</strong>
@@ -121,7 +126,7 @@ export default function CartDrawer() {
 
                   <button
                     className="icon-btn cline__del"
-                    onClick={() => removeFromCart(l.productId)}
+                    onClick={() => removeFromCart(l.key)}
                     aria-label={`Remover ${l.product.name}`}
                   >
                     <Icon name="trash" size={16} />

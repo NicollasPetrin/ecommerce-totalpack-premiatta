@@ -87,11 +87,48 @@ export const schemas = {
       specs: z.array(z.string()).default([]),
       featured: z.boolean().default(false),
       active: z.boolean().default(true),
+      // Medidas do pacote. Zero é permitido: só impede gerar etiqueta.
+      weightG: z.coerce.number().int().min(0, 'Peso inválido.').default(0),
+      lengthCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
+      widthCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
+      heightCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
+      variantLabel: z.string().trim().default(''),
+      variants: z
+        .array(
+          z
+            .object({
+              id: z.string().uuid().nullish(),
+              name: z.string().trim().min(1, 'Informe o nome da variação.'),
+              sku: z.string().trim().default(''),
+              price: money.refine((v) => v > 0, 'Preço deve ser maior que zero.'),
+              promo: money.default(0),
+              stock: z.coerce.number().int().min(0, 'Estoque inválido.'),
+              active: z.boolean().default(true),
+            })
+            .refine((v) => v.promo === 0 || v.promo < v.price, {
+              message: 'A promoção deve ser menor que o preço.',
+              path: ['promo'],
+            }),
+        )
+        .default([]),
     })
     .refine((p) => p.promo === 0 || p.promo < p.price, {
       message: 'A promoção deve ser menor que o preço.',
       path: ['promo'],
-    }),
+    })
+    /* Uma lista de variações sem nome de eixo não diz nada ao cliente: ele
+       veria botões soltos sem saber se escolhe cor ou tamanho. */
+    .refine((p) => p.variants.length === 0 || p.variantLabel.length > 0, {
+      message: 'Dê um nome ao tipo de variação (ex.: Cor, Tamanho).',
+      path: ['variantLabel'],
+    })
+    .refine(
+      (p) => {
+        const nomes = p.variants.map((v) => v.name.toLowerCase())
+        return new Set(nomes).size === nomes.length
+      },
+      { message: 'Há variações com o mesmo nome.', path: ['variants'] },
+    ),
 
   zone: z
     .object({
@@ -127,6 +164,8 @@ export const schemas = {
         .array(
           z.object({
             productId: z.string().uuid(),
+            // Ausente em produto sem variação.
+            variantId: z.string().uuid().nullish(),
             qty: z.coerce.number().int().positive(),
           }),
         )

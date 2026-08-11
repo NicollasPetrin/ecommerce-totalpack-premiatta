@@ -74,7 +74,32 @@ orderRoutes.post(
         [d.items.map((i) => i.productId)],
       )
 
+      /* As variações também precisam da trava, e não vêm no SELECT acima:
+         é o estoque delas que a linha do pedido baixa. */
+      const idsVariacao = d.items.map((i) => i.variantId).filter(Boolean)
+      const { rows: variacoes } = idsVariacao.length
+        ? await client.query(
+            `SELECT id, product_id, name, sku, price, promo, stock, active
+               FROM product_variants
+              WHERE id = ANY($1::uuid[])
+              FOR UPDATE`,
+            [idsVariacao],
+          )
+        : { rows: [] }
+
+      /* Quais produtos do pedido exigem escolha. Sem isto, um item de produto
+         com variação chegando sem `variantId` cairia no estoque do produto
+         pai — que fica zerado nesse caso — e o cliente veria "sem estoque"
+         quando o problema é outro. */
+      const { rows: comVariacao } = await client.query(
+        `SELECT DISTINCT product_id FROM product_variants
+          WHERE product_id = ANY($1::uuid[]) AND active`,
+        [d.items.map((i) => i.productId)],
+      )
+      const exigeEscolha = new Set(comVariacao.map((r) => r.product_id))
+
       const byId = new Map(products.map((p) => [p.id, p]))
+      const variacaoPorId = new Map(variacoes.map((v) => [v.id, v]))
       const lines = []
 
       for (const item of d.items) {
@@ -82,18 +107,35 @@ orderRoutes.post(
         if (!product || !product.active) {
           throw conflict(`Um dos produtos saiu do catálogo. Revise a sacola.`)
         }
-        if (product.stock < item.qty) {
-          throw conflict(
-            `“${product.name}” tem apenas ${product.stock} em estoque.`,
-          )
+
+        if (!item.variantId && exigeEscolha.has(product.id)) {
+          throw conflict(`Escolha uma opção de “${product.name}” antes de finalizar.`)
+        }
+
+        let variant = null
+        if (item.variantId) {
+          variant = variacaoPorId.get(item.variantId)
+          // Precisa existir, estar ativa e pertencer a este produto — senão
+          // dava para comprar a variação barata de um item caro.
+          if (!variant || !variant.active || variant.product_id !== product.id) {
+            throw conflict(`Uma das opções escolhidas saiu do catálogo. Revise a sacola.`)
+          }
+        }
+
+        // Quem manda no estoque e no preço é a variação, quando existe.
+        const origem = variant ?? product
+        const rotulo = variant ? `${product.name} (${variant.name})` : product.name
+
+        if (origem.stock < item.qty) {
+          throw conflict(`“${rotulo}” tem apenas ${origem.stock} em estoque.`)
         }
         // Preço do banco, nunca o que o navegador mandou.
         const price =
-          Number(product.promo) > 0 && Number(product.promo) < Number(product.price)
-            ? Number(product.promo)
-            : Number(product.price)
+          Number(origem.promo) > 0 && Number(origem.promo) < Number(origem.price)
+            ? Number(origem.promo)
+            : Number(origem.price)
 
-        lines.push({ product, qty: item.qty, price })
+        lines.push({ product, variant, qty: item.qty, price })
       }
 
       const subtotal = lines.reduce((acc, l) => acc + l.price * l.qty, 0)
@@ -121,17 +163,31 @@ orderRoutes.post(
 
       for (const line of lines) {
         await client.query(
-          `INSERT INTO order_items (order_id, product_id, name, sku, art, tint, price, qty)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          `INSERT INTO order_items
+             (order_id, product_id, variant_id, variant_name,
+              name, sku, art, tint, price, qty)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
           [
-            orderRow.id, line.product.id, line.product.name, line.product.sku,
+            orderRow.id, line.product.id,
+            line.variant?.id ?? null, line.variant?.name ?? '',
+            line.product.name,
+            // O código da variação é mais específico que o do produto.
+            line.variant?.sku || line.product.sku,
             line.product.art, line.product.tint, line.price, line.qty,
           ],
         )
-        await client.query(`UPDATE products SET stock = stock - $1 WHERE id = $2`, [
-          line.qty,
-          line.product.id,
-        ])
+
+        if (line.variant) {
+          await client.query(
+            `UPDATE product_variants SET stock = stock - $1 WHERE id = $2`,
+            [line.qty, line.variant.id],
+          )
+        } else {
+          await client.query(`UPDATE products SET stock = stock - $1 WHERE id = $2`, [
+            line.qty,
+            line.product.id,
+          ])
+        }
       }
 
       // O documento fica guardado na conta para não ser redigitado na próxima

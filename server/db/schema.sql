@@ -309,6 +309,50 @@ ALTER TABLE customers ADD COLUMN IF NOT EXISTS doc          TEXT NOT NULL DEFAUL
 -- estoque em dobro e a loja passaria a vender o que não tem.
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS stock_restored BOOLEAN NOT NULL DEFAULT false;
 
+-- Peso e medidas do pacote. Nenhuma transportadora emite etiqueta sem isso.
+-- Ficam com zero por padrão: produto sem medida continua vendendo normalmente,
+-- só não pode gerar etiqueta.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_g  INTEGER      NOT NULL DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS length_cm NUMERIC(6,1) NOT NULL DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS width_cm  NUMERIC(6,1) NOT NULL DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS height_cm NUMERIC(6,1) NOT NULL DEFAULT 0;
+
+-- Nome do eixo de variação ("Cor", "Tamanho"). Vazio = produto sem variação,
+-- que é o comportamento de sempre.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_label TEXT NOT NULL DEFAULT '';
+
+-- -----------------------------------------------------------------------------
+-- Variações de produto
+--
+-- Um eixo só (cor OU tamanho), não uma matriz: no material escolar a variação
+-- é sempre de uma dimensão, e a matriz cobraria um preço de complexidade que
+-- ninguém aqui usaria. Cada opção tem preço e estoque próprios, porque
+-- colorset azul e vermelho podem acabar em dias diferentes.
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS product_variants (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  sku        TEXT NOT NULL DEFAULT '',
+  price      NUMERIC(10,2) NOT NULL CHECK (price >= 0),
+  promo      NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (promo >= 0),
+  stock      INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+  active     BOOLEAN NOT NULL DEFAULT true,
+  position   INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT product_variants_promo_below_price CHECK (promo = 0 OR promo < price)
+);
+
+CREATE INDEX IF NOT EXISTS product_variants_product
+  ON product_variants (product_id, position);
+
+-- Qual variação foi comprada. O nome é copiado junto porque o histórico do
+-- pedido não pode mudar se a variação for renomeada ou excluída depois.
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_id
+  UUID REFERENCES product_variants(id) ON DELETE SET NULL;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_name TEXT NOT NULL DEFAULT '';
+
 -- -----------------------------------------------------------------------------
 -- updated_at automático
 -- -----------------------------------------------------------------------------

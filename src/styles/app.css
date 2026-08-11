@@ -1077,6 +1077,11 @@
   padding-top: 10px;
 }
 
+.pcard__from {
+  font-size: var(--fs-caption);
+  color: var(--label-3);
+}
+
 .pcard__price strong {
   font-size: var(--fs-title-3);
   font-weight: 600;
@@ -1436,6 +1441,59 @@
 
 .pdp__stock { margin-bottom: 22px; }
 
+/* Seletor de variação na página do produto */
+.pdp__variants {
+  margin: 20px 0 4px;
+}
+
+.pdp__variants-label {
+  display: block;
+  margin-bottom: 9px;
+  font-size: var(--fs-footnote);
+  color: var(--label-2);
+}
+
+.pdp__variants-label strong { color: var(--label); font-weight: 600; }
+
+.pdp__variants-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vopt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 15px;
+  border-radius: var(--r-full);
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--separator);
+  color: var(--label);
+  font-size: var(--fs-footnote);
+  font-weight: 500;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.vopt:hover { border-color: var(--label-3); }
+
+.vopt.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Esgotado continua clicável de propósito: a pessoa precisa poder abrir a
+   opção para ver que acabou, em vez de achar que o botão está quebrado. */
+.vopt.is-out { opacity: 0.55; }
+.vopt.is-out em {
+  font-style: normal;
+  font-size: var(--fs-caption);
+  color: var(--label-3);
+}
+
 .pdp__buy {
   display: flex;
   gap: 12px;
@@ -1671,6 +1729,12 @@
 
 .cline__name:hover { text-decoration: none; color: var(--accent); }
 
+.cline__variant {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--accent);
+}
+
 .cline__unit {
   font-size: var(--fs-caption);
   color: var(--label-3);
@@ -1845,6 +1909,7 @@
 
 .form-grid .col-2 { grid-column: span 2; }
 .form-grid .field--uf { max-width: 110px; }
+.form-grid--4 { grid-template-columns: repeat(4, 1fr); }
 
 .field.has-error .input,
 .field.has-error .textarea,
@@ -1973,6 +2038,13 @@
 }
 
 .summary__name .mono { font-size: var(--fs-caption); color: var(--label-4); }
+
+.summary__variant {
+  display: block;
+  font-style: normal;
+  font-size: var(--fs-caption);
+  color: var(--label-3);
+}
 
 .summary__items strong { font-size: var(--fs-footnote); white-space: nowrap; }
 
@@ -2588,6 +2660,8 @@
 
   .form-grid { grid-template-columns: 1fr; }
   .form-grid .col-2 { grid-column: span 1; }
+  /* Peso e as três medidas: em duas colunas ainda dá para ler no celular. */
+  .form-grid--4 { grid-template-columns: 1fr 1fr; }
   .options--grid { grid-template-columns: 1fr; }
 
   .pdp__specs ul { grid-template-columns: 1fr; }

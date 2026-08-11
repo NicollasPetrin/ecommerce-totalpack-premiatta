@@ -41,23 +41,39 @@ export const PAYMENT_LABEL = {
 /* Carrinho — único estado que continua no navegador                           */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Identidade da linha da sacola.
+ *
+ * O produto sozinho não serve mais: colorset azul e vermelho são o mesmo
+ * produto e precisam ocupar linhas separadas, com quantidade e estoque
+ * próprios. Produto sem variação continua com a parte de trás vazia, então
+ * as sacolas salvas antes desta mudança seguem funcionando.
+ */
+export const chaveLinha = (productId, variantId) => `${productId}:${variantId ?? ''}`
+
 function cartReducer(state, action) {
   switch (action.type) {
     case 'add': {
-      const found = state.find((l) => l.productId === action.productId)
-      if (found) {
+      const chave = chaveLinha(action.productId, action.variantId)
+      const achou = state.some((l) => chaveLinha(l.productId, l.variantId) === chave)
+      if (achou) {
         return state.map((l) =>
-          l.productId === action.productId ? { ...l, qty: l.qty + action.qty } : l,
+          chaveLinha(l.productId, l.variantId) === chave ? { ...l, qty: l.qty + action.qty } : l,
         )
       }
-      return [...state, { productId: action.productId, qty: action.qty }]
+      return [
+        ...state,
+        { productId: action.productId, variantId: action.variantId ?? null, qty: action.qty },
+      ]
     }
     case 'setQty':
       return state
-        .map((l) => (l.productId === action.productId ? { ...l, qty: action.qty } : l))
+        .map((l) =>
+          chaveLinha(l.productId, l.variantId) === action.key ? { ...l, qty: action.qty } : l,
+        )
         .filter((l) => l.qty > 0)
     case 'remove':
-      return state.filter((l) => l.productId !== action.productId)
+      return state.filter((l) => chaveLinha(l.productId, l.variantId) !== action.key)
     case 'clear':
       return []
     default:
@@ -217,8 +233,28 @@ export function StoreProvider({ children }) {
         .map((l) => {
           const product = productById[l.productId]
           if (!product || !product.active) return null
-          const price = effectivePrice(product)
-          return { ...l, product, price, lineTotal: price * l.qty }
+
+          const variant = l.variantId
+            ? (product.variants ?? []).find((v) => v.id === l.variantId)
+            : null
+          // A variação escolhida pode ter sido desativada ou excluída depois
+          // que o item entrou na sacola. Nesse caso a linha some, como já
+          // acontecia com produto fora do catálogo.
+          if (l.variantId && (!variant || !variant.active)) return null
+
+          // Quem manda no preço e no estoque é a variação, quando existe.
+          const origem = variant ?? product
+          const price = effectivePrice(origem)
+
+          return {
+            ...l,
+            key: chaveLinha(l.productId, l.variantId),
+            product,
+            variant: variant ?? null,
+            stock: origem.stock,
+            price,
+            lineTotal: price * l.qty,
+          }
         })
         .filter(Boolean),
     [cart, productById],
@@ -233,36 +269,51 @@ export function StoreProvider({ children }) {
   const total = subtotal + (shipping ?? 0)
 
   const addToCart = useCallback(
-    (product, qty = 1) => {
+    (product, qty = 1, variant = null) => {
       if (!product) return
-      const inCart = cart.find((l) => l.productId === product.id)?.qty ?? 0
-      if (inCart + qty > product.stock) {
+
+      // Produto com variação exige escolha: sem ela não dá para saber qual
+      // estoque baixar nem qual preço cobrar.
+      const temVariacoes = (product.variants ?? []).length > 0
+      if (temVariacoes && !variant) {
+        toast(`Escolha uma opção de ${product.variantLabel || 'variação'}.`, 'err')
+        return
+      }
+
+      const origem = variant ?? product
+      const chave = chaveLinha(product.id, variant?.id)
+      const naSacola = cart.find((l) => chaveLinha(l.productId, l.variantId) === chave)?.qty ?? 0
+
+      if (naSacola + qty > origem.stock) {
         toast(
-          product.stock === 0 ? 'Produto sem estoque.' : `Só temos ${product.stock} em estoque.`,
+          origem.stock === 0 ? 'Produto sem estoque.' : `Só temos ${origem.stock} em estoque.`,
           'err',
         )
         return
       }
-      dispatchCart({ type: 'add', productId: product.id, qty })
-      toast(`${product.name} adicionado à sacola.`)
+
+      dispatchCart({ type: 'add', productId: product.id, variantId: variant?.id ?? null, qty })
+      toast(`${product.name}${variant ? ` (${variant.name})` : ''} adicionado à sacola.`)
     },
     [cart, toast],
   )
 
+  /* Recebem a chave da linha, não o id do produto: o mesmo produto pode estar
+     na sacola mais de uma vez, em variações diferentes. */
   const setQty = useCallback(
-    (productId, qty) => {
-      const product = productById[productId]
-      if (product && qty > product.stock) {
-        toast(`Estoque máximo: ${product.stock}.`, 'err')
-        dispatchCart({ type: 'setQty', productId, qty: product.stock })
+    (key, qty) => {
+      const linha = cartLines.find((l) => l.key === key)
+      if (linha && qty > linha.stock) {
+        toast(`Estoque máximo: ${linha.stock}.`, 'err')
+        dispatchCart({ type: 'setQty', key, qty: linha.stock })
         return
       }
-      dispatchCart({ type: 'setQty', productId, qty })
+      dispatchCart({ type: 'setQty', key, qty })
     },
-    [productById, toast],
+    [cartLines, toast],
   )
 
-  const removeFromCart = useCallback((productId) => dispatchCart({ type: 'remove', productId }), [])
+  const removeFromCart = useCallback((key) => dispatchCart({ type: 'remove', key }), [])
   const clearCart = useCallback(() => dispatchCart({ type: 'clear' }), [])
 
   /* ------------------------------------------------------------------------ */
@@ -272,7 +323,11 @@ export function StoreProvider({ children }) {
   const placeOrder = useCallback(
     async (form) => {
       const { order } = await api.post('/orders', {
-        items: cartLines.map((l) => ({ productId: l.product.id, qty: l.qty })),
+        items: cartLines.map((l) => ({
+          productId: l.product.id,
+          variantId: l.variant?.id ?? null,
+          qty: l.qty,
+        })),
         name: form.name,
         email: form.email ?? '',
         phone: form.phone,

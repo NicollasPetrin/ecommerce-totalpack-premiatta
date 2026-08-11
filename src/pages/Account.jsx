@@ -554,8 +554,22 @@ function OrderDetail({ orderId, onClose }) {
     let missing = 0
     order.items.forEach((i) => {
       const product = productById[i.productId]
-      if (product?.active && product.stock > 0) {
-        addToCart(product, Math.min(i.qty, product.stock))
+      if (!product?.active) {
+        missing += 1
+        return
+      }
+      // A variação comprada pode não existir mais; sem ela a recompra não
+      // sabe qual opção repor, então o item entra como indisponível.
+      const variant = i.variantId
+        ? (product.variants ?? []).find((v) => v.id === i.variantId && v.active)
+        : null
+      if (i.variantId && !variant) {
+        missing += 1
+        return
+      }
+      const estoque = (variant ?? product).stock
+      if (estoque > 0) {
+        addToCart(product, Math.min(i.qty, estoque), variant)
         added += 1
       } else {
         missing += 1

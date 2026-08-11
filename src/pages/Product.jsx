@@ -13,6 +13,7 @@ export default function Product() {
   const navigate = useNavigate()
   const { productById, categoryById, products, addToCart, setCartOpen, settings } = useStore()
   const [qty, setQty] = useState(1)
+  const [variantId, setVariantId] = useState(null)
 
   const product = productById[id]
 
@@ -30,17 +31,30 @@ export default function Product() {
   }
 
   const category = categoryById[product.categoryId]
-  const price = effectivePrice(product)
-  const off = discountPct(product.price, product.promo)
-  const out = product.stock <= 0
-  const low = !out && product.stock <= settings.lowStockThreshold
+
+  /* Com variação, tudo que é preço e estoque passa a vir dela. A escolhida é
+     a primeira com estoque — abrir a página já num item esgotado obrigaria o
+     cliente a descobrir sozinho que precisa trocar. */
+  const variacoes = (product.variants ?? []).filter((v) => v.active)
+  const temVariacoes = variacoes.length > 0
+  const escolhida = temVariacoes
+    ? variacoes.find((v) => v.id === variantId) ??
+      variacoes.find((v) => v.stock > 0) ??
+      variacoes[0]
+    : null
+
+  const origem = escolhida ?? product
+  const price = effectivePrice(origem)
+  const off = discountPct(origem.price, origem.promo)
+  const out = origem.stock <= 0
+  const low = !out && origem.stock <= settings.lowStockThreshold
 
   const related = products
     .filter((p) => p.active && p.categoryId === product.categoryId && p.id !== product.id)
     .slice(0, 4)
 
   const buyNow = () => {
-    addToCart(product, qty)
+    addToCart(product, qty, escolhida)
     if (!out) navigate('/checkout')
   }
 
@@ -77,16 +91,49 @@ export default function Product() {
             <strong>{money(price)}</strong>
             {off > 0 && (
               <>
-                <s>{money(product.price)}</s>
-                <span className="tag tag--green">Economize {money(product.price - price)}</span>
+                <s>{money(origem.price)}</s>
+                <span className="tag tag--green">Economize {money(origem.price - price)}</span>
               </>
             )}
           </div>
           <p className="pdp__unit">
-            Preço por {product.unit} · SKU {product.sku}
+            Preço por {product.unit} · SKU {escolhida?.sku || product.sku}
           </p>
 
           <p className="pdp__desc">{product.description}</p>
+
+          {temVariacoes && (
+            <div className="pdp__variants">
+              <span className="pdp__variants-label">
+                {product.variantLabel}: <strong>{escolhida?.name}</strong>
+              </span>
+              <div className="pdp__variants-list" role="radiogroup" aria-label={product.variantLabel}>
+                {variacoes.map((v) => {
+                  const semEstoque = v.stock <= 0
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={v.id === escolhida?.id}
+                      className={`vopt${v.id === escolhida?.id ? ' is-on' : ''}${
+                        semEstoque ? ' is-out' : ''
+                      }`}
+                      onClick={() => {
+                        setVariantId(v.id)
+                        // A quantidade escolhida pode não caber na variação
+                        // nova; sem isto o botão de comprar ficaria travado.
+                        setQty((q) => Math.max(1, Math.min(q, v.stock || 1)))
+                      }}
+                    >
+                      {v.name}
+                      {semEstoque && <em>esgotado</em>}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="pdp__stock">
             {out ? (
@@ -95,22 +142,22 @@ export default function Product() {
               </span>
             ) : low ? (
               <span className="tag tag--orange">
-                <Icon name="alert" size={14} /> Últimas {product.stock} unidades
+                <Icon name="alert" size={14} /> Últimas {origem.stock} unidades
               </span>
             ) : (
               <span className="tag tag--green">
-                <Icon name="check" size={14} /> Em estoque · {product.stock} disponíveis
+                <Icon name="check" size={14} /> Em estoque · {origem.stock} disponíveis
               </span>
             )}
           </div>
 
           <div className="pdp__buy">
-            <QtyStepper value={qty} onChange={setQty} max={Math.max(1, product.stock)} />
+            <QtyStepper value={qty} onChange={setQty} max={Math.max(1, origem.stock)} />
             <button
               className="btn btn--primary btn--lg"
               disabled={out}
               onClick={() => {
-                addToCart(product, qty)
+                addToCart(product, qty, escolhida)
                 setCartOpen(true)
               }}
             >
