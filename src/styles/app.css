@@ -482,65 +482,18 @@
 /* ==========================================================================
    Abertura da página inicial
 
-   Uma frase, dois botões grandes e a informação de entrega. Nada de textos
-   decorativos ou chamadas secundárias discretas: o público da loja precisa
-   enxergar o que é clicável sem procurar.
+   A faixa de destaques assumiu o topo, então aqui sobrou só o carrossel de
+   produtos sobre o degradê que separa o topo do resto da página.
    ========================================================================== */
 
 .open {
   position: relative;
   overflow: hidden;
-  padding: clamp(44px, 7vw, 80px) 0 clamp(40px, 6vw, 72px);
+  padding: clamp(24px, 4vw, 44px) 0 clamp(40px, 6vw, 72px);
   background: linear-gradient(180deg, var(--bg-grouped) 0%, var(--bg) 100%);
 }
 
 .open__inner { text-align: center; }
-
-.open__logo {
-  display: block;
-  margin: 0 auto 22px;
-  animation: rise 0.7s var(--ease-out) both;
-}
-
-.open__title {
-  font-size: clamp(2.25rem, 1.3rem + 4vw, 4rem);
-  font-weight: 700;
-  letter-spacing: -0.038em;
-  line-height: 1.06;
-  animation: rise 0.7s var(--ease-out) both;
-}
-
-.open__sub {
-  margin: 18px auto 0;
-  max-width: 40ch;
-  font-size: clamp(1.125rem, 1rem + 0.6vw, 1.4375rem);
-  color: var(--label-2);
-  line-height: 1.5;
-  animation: rise 0.7s 0.07s var(--ease-out) both;
-}
-
-.open__cta {
-  margin-top: 34px;
-  display: flex;
-  gap: 14px;
-  justify-content: center;
-  flex-wrap: wrap;
-  animation: rise 0.7s 0.14s var(--ease-out) both;
-}
-
-.open__note {
-  margin-top: 22px;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  flex-wrap: wrap;
-  justify-content: center;
-  font-size: var(--fs-callout);
-  color: var(--label-2);
-  animation: rise 0.7s 0.2s var(--ease-out) both;
-}
-
-.open__note svg { color: var(--green); flex: none; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(22px); }
@@ -551,10 +504,12 @@
    Carrossel da página inicial
    ========================================================================== */
 
+/* Sem margem nem atraso: o carrossel era o último a entrar, depois do título
+   e do botão que saíram. Agora é o primeiro da seção, e esperar 0,26 s para
+   aparecer seria só demora. */
 .carousel {
   position: relative;
-  margin-top: clamp(36px, 5vw, 56px);
-  animation: rise 0.9s 0.26s var(--ease-out) both;
+  animation: rise 0.9s var(--ease-out) both;
 }
 
 .carousel__track {
@@ -2637,8 +2592,6 @@
 
   .pdp__specs ul { grid-template-columns: 1fr; }
   .pdp__buy .btn { min-width: 100%; }
-
-  .open__cta .btn { width: 100%; }
 
   /* No celular o dedo arrasta, então as setas viram estorvo sobre os cards. */
   .carousel__nav { display: none; }

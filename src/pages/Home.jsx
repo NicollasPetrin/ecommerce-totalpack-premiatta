@@ -1,11 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
-import { money } from '../lib/format'
 import ProductCard from '../components/ProductCard'
 import ProductArt from '../components/ProductArt'
 import HeroCarousel from '../components/HeroCarousel'
 import HeroBanner from '../components/HeroBanner'
-import Logo from '../components/Logo'
 import Icon from '../components/Icon'
 
 /**
@@ -42,32 +40,18 @@ export default function Home() {
 
   return (
     <>
+      {/* O h1 visível saiu com a abertura, mas a página não pode ficar sem um:
+          é o que dá nome a ela para leitores de tela e para a busca. */}
+      <h1 className="sr-only">
+        {settings.storeName} — material escolar completo com entrega
+      </h1>
+
       {/* -------------------------------------------------- Faixa de destaques */}
       <HeroBanner products={carouselItems} />
 
       {/* ------------------------------------------------------------ Abertura */}
       <section className="open">
         <div className="wrap open__inner">
-          <Logo size={104} className="open__logo" />
-
-          <h1 className="open__title">Material escolar completo</h1>
-
-          <p className="open__sub">
-            Papel A4, colorset, cadernos e tudo o que a lista da escola pede.
-            Você escolhe aqui e a gente entrega na sua casa.
-          </p>
-
-          <div className="open__cta">
-            <Link to="/catalogo" className="btn btn--primary btn--xl">
-              Ver todos os produtos
-            </Link>
-          </div>
-
-          <p className="open__note">
-            <Icon name="truck" size={18} />
-            Entrega grátis em pedidos acima de {money(settings.freeShippingFrom)}
-          </p>
-
           <HeroCarousel products={carouselItems} />
         </div>
       </section>
