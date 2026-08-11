@@ -73,10 +73,14 @@ function StoreLayout() {
   return (
     <div className="shell">
       <Header />
-      <CategoryStrip />
-      <main className="shell__main">
-        <Outlet />
-      </main>
+      {/* O cabeçalho é fixo, então quem desconta a altura dele é este bloco —
+          e não o <main>, senão a faixa de categorias ficaria por baixo. */}
+      <div className="shell__below">
+        <CategoryStrip />
+        <main className="shell__main">
+          <Outlet />
+        </main>
+      </div>
       <Footer />
       <CartDrawer />
     </div>

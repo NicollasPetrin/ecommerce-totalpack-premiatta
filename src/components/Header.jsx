@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import Logo from './Logo'
 import Icon from './Icon'
@@ -13,6 +13,11 @@ export default function Header() {
   const [q, setQ] = useState('')
   const inputRef = useRef(null)
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const { pathname } = useLocation()
+  /* Só destaca categoria dentro do catálogo: na home nenhuma está aberta. */
+  const noCatalogo = pathname === '/catalogo'
+  const catAtual = noCatalogo ? params.get('cat') : null
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -68,16 +73,26 @@ export default function Header() {
           {settings.storeName}
         </Link>
 
-        <nav className="nav__links" aria-label="Categorias">
-          <NavLink to="/catalogo" end>
-            Tudo
-          </NavLink>
-          {topCats.slice(0, 5).map((c) => (
-            <NavLink key={c.id} to={`/catalogo?cat=${c.slug}`}>
-              {c.name}
-            </NavLink>
-          ))}
-        </nav>
+        {/* Busca sempre à vista, como nos atacados de papelaria: numa loja de
+            catálogo grande, procurar é o caminho principal, não um extra
+            escondido atrás de um ícone. No celular ela vira o botão de lupa
+            logo abaixo, porque não há largura para as duas coisas. */}
+        <form className="nav__find" onSubmit={submit} role="search">
+          <Icon name="search" size={17} />
+          <input
+            className="nav__find-input"
+            type="search"
+            placeholder="Buscar por nome ou código do produto…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Buscar produtos"
+          />
+          {q && (
+            <button type="button" className="nav__find-clear" onClick={() => setQ('')} aria-label="Limpar">
+              <Icon name="close" size={15} />
+            </button>
+          )}
+        </form>
 
         <div className="nav__actions">
           <button
@@ -90,7 +105,7 @@ export default function Header() {
           </button>
 
           <button
-            className="icon-btn"
+            className="icon-btn nav__find-toggle"
             onClick={() => setSearchOpen((v) => !v)}
             aria-label="Buscar"
             aria-expanded={searchOpen}
@@ -113,6 +128,25 @@ export default function Header() {
           </button>
         </div>
       </div>
+
+      {/* Segunda linha só de categorias, como Reval e VPA fazem: todas cabem,
+          em vez das cinco que sobravam espremidas ao lado da logo. */}
+      <nav className="nav__cats" aria-label="Categorias">
+        <div className="nav__cats-inner">
+          <Link to="/catalogo" className={noCatalogo && !catAtual ? 'is-on' : undefined}>
+            Todos os produtos
+          </Link>
+          {topCats.map((c) => (
+            <Link
+              key={c.id}
+              to={`/catalogo?cat=${c.slug}`}
+              className={catAtual === c.slug ? 'is-on' : undefined}
+            >
+              {c.name}
+            </Link>
+          ))}
+        </div>
+      </nav>
 
       {/* Busca deslizante */}
       <div className={`nav__search${searchOpen ? ' is-open' : ''}`}>

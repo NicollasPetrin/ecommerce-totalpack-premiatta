@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import ProductArt from './ProductArt'
 import Icon from './Icon'
@@ -14,7 +14,10 @@ import Icon from './Icon'
 export default function CategoryStrip() {
   const { categories, products } = useStore()
   const [params] = useSearchParams()
-  const atual = params.get('cat')
+  const { pathname } = useLocation()
+  /* Só destaca categoria dentro do catálogo: na home nenhuma está aberta. */
+  const noCatalogo = pathname === '/catalogo'
+  const atual = noCatalogo ? params.get('cat') : null
 
   const ordenadas = [...categories].sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
   if (!ordenadas.length) return null
@@ -24,7 +27,7 @@ export default function CategoryStrip() {
   return (
     <nav className="catstrip" aria-label="Atalhos de categoria">
       <div className="catstrip__track">
-        <Link to="/catalogo" className={`catshort${!atual ? ' is-on' : ''}`}>
+        <Link to="/catalogo" className={`catshort${noCatalogo && !atual ? ' is-on' : ''}`}>
           <span className="catshort__art catshort__art--all">
             <Icon name="grid" size={22} />
           </span>
