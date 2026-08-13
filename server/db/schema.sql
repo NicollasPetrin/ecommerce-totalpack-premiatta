@@ -395,6 +395,75 @@ CREATE UNIQUE INDEX IF NOT EXISTS product_variants_combinacao
   WHERE options <> '{}'::jsonb;
 
 -- -----------------------------------------------------------------------------
+-- Endereço do remetente
+--
+-- `settings.address` é texto livre e serve para mostrar no rodapé. A etiqueta
+-- exige os campos separados, com CEP em dígitos — por isso a duplicação.
+-- -----------------------------------------------------------------------------
+
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_name    TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_doc     TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_cep     TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_street  TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_number  TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_compl   TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_district TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_city    TEXT NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_state   TEXT NOT NULL DEFAULT '';
+
+-- -----------------------------------------------------------------------------
+-- Envios
+--
+-- Uma linha por etiqueta. Sem esta tabela, uma falha no meio do processo de
+-- compra faria a loja gerar etiqueta duplicada — e etiqueta duplicada é
+-- cobrança duplicada da transportadora.
+--
+-- O ciclo do Melhor Envio tem quatro passos (carrinho, checkout/pagamento,
+-- geração, impressão), e a etiqueta pode ficar parada em qualquer um deles.
+-- Por isso o status é próprio, e não um espelho do que a transportadora diz.
+-- -----------------------------------------------------------------------------
+
+DO $$ BEGIN
+  CREATE TYPE shipment_status AS ENUM (
+    'rascunho',    -- no carrinho da transportadora, ainda não pago
+    'pago',        -- comprado, aguardando geração
+    'gerada',      -- etiqueta emitida, pronta para imprimir
+    'postado',     -- despachado, em trânsito
+    'entregue',
+    'cancelado',
+    'erro'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE TABLE IF NOT EXISTS shipments (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id      UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  provider      TEXT NOT NULL,
+  -- Id da etiqueta no lado da transportadora. Único por provedor para o
+  -- webhook conseguir achar a linha sem ambiguidade.
+  external_id   TEXT NOT NULL DEFAULT '',
+  status        shipment_status NOT NULL DEFAULT 'rascunho',
+  service_name  TEXT NOT NULL DEFAULT '',
+  carrier       TEXT NOT NULL DEFAULT '',
+  tracking      TEXT NOT NULL DEFAULT '',
+  label_url     TEXT NOT NULL DEFAULT '',
+  cost          NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (cost >= 0),
+  -- Resposta crua da transportadora, para conferência quando algo diverge.
+  raw           JSONB NOT NULL DEFAULT '{}'::jsonb,
+  error         TEXT NOT NULL DEFAULT '',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS shipments_order ON shipments (order_id, created_at DESC);
+
+-- A busca do webhook é por (provedor, id externo); o índice único também
+-- impede duas etiquetas apontando para a mesma na transportadora.
+CREATE UNIQUE INDEX IF NOT EXISTS shipments_externo
+  ON shipments (provider, external_id)
+  WHERE external_id <> '';
+
+-- -----------------------------------------------------------------------------
 -- updated_at automático
 -- -----------------------------------------------------------------------------
 

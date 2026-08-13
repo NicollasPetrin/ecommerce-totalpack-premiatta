@@ -4,6 +4,8 @@ import { one } from '../db/pool.js'
 import { wrap } from '../lib/http.js'
 import { getProvider, listProviders } from '../lib/payments/index.js'
 import { applyPaymentEvent } from '../lib/payments/service.js'
+import { getShippingProvider, listShippingProviders } from '../lib/shipping/index.js'
+import { syncShipment } from '../lib/shipping/service.js'
 
 export const webhookRoutes = Router()
 
@@ -105,6 +107,53 @@ webhookRoutes.post(
       ]).catch(() => {})
       // 500 faz a processadora reenviar — é o que queremos num erro nosso.
       res.status(500).json({ error: 'Erro ao processar evento.' })
+    }
+  }),
+)
+
+/* ============================================================= Transportadora */
+
+/**
+ * Notificações da transportadora sobre etiquetas.
+ *
+ * Diferente do webhook de pagamento em um ponto importante: o corpo aqui **não
+ * é fonte da verdade**. O Melhor Envio não assina a notificação, então
+ * qualquer um que descubra a URL pode enviar um JSON dizendo o que quiser.
+ *
+ * Por isso o corpo serve só para saber *qual* etiqueta mexeu — o estado real é
+ * buscado na API deles, com o nosso token, antes de gravar qualquer coisa.
+ * Uma notificação forjada, no pior caso, gasta uma consulta à API.
+ */
+webhookRoutes.post(
+  '/shipping/:provider',
+  express.json({ limit: '256kb' }),
+  wrap(async (req, res) => {
+    const providerId = req.params.provider
+
+    if (!listShippingProviders().includes(providerId)) {
+      // 404 sem detalhes: não confirmamos quais rotas existem.
+      return res.status(404).json({ error: 'Não encontrado.' })
+    }
+
+    const referencias = getShippingProvider(providerId).parseEvent(req.body ?? {})
+
+    if (!referencias.length) {
+      // Evento que não reconhecemos. 200 mesmo assim: devolver erro faria a
+      // transportadora reenviar para sempre.
+      return res.json({ ok: true, ignorado: true })
+    }
+
+    // Responde antes de sincronizar: a transportadora só precisa saber que
+    // recebemos, e a consulta à API dela pode demorar mais que o tempo limite
+    // do webhook.
+    res.json({ ok: true, etiquetas: referencias.length })
+
+    for (const ref of referencias) {
+      try {
+        await syncShipment(providerId, ref)
+      } catch (err) {
+        console.error(`[webhook] falha ao sincronizar etiqueta ${ref}:`, err.message)
+      }
     }
   }),
 )

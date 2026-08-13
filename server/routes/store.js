@@ -5,7 +5,7 @@ import { parse, schemas, validarUuid } from '../lib/validate.js'
 import {
   clearSession, requireAdmin, setSession, verifyPassword, hashPassword,
 } from '../lib/auth.js'
-import { findOverlaps, findZone } from '../lib/shipping.js'
+import { findOverlaps, findZone } from '../lib/zones.js'
 import { limiteLogin } from '../lib/ratelimit.js'
 import * as s from '../lib/serialize.js'
 

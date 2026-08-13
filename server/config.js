@@ -48,6 +48,28 @@ export const config = {
 
   /** Nome usado na descrição da cobrança que o cliente vê. */
   storeLabel: process.env.STORE_LABEL ?? 'TotalPack',
+
+  /* ---- Envio ----
+     'manual' = sem transportadora integrada; a etiqueta é emitida fora do
+     site, como é hoje. O frete cobrado do cliente continua saindo da tabela
+     de faixas de CEP em qualquer caso — a transportadora entra só para
+     emitir a etiqueta, que é mais previsível para quem compra. */
+  shippingProvider: process.env.SHIPPING_PROVIDER ?? 'manual',
+
+  melhorEnvio: {
+    baseUrl: (
+      process.env.MELHORENVIO_BASE_URL ?? 'https://sandbox.melhorenvio.com.br'
+    ).replace(/\/+$/, ''),
+    token: process.env.MELHORENVIO_TOKEN ?? '',
+    // O access_token vale 30 dias e o refresh 45. Sem estes dois, a renovação
+    // não acontece e a emissão para de funcionar em um mês, sem aviso.
+    clientId: process.env.MELHORENVIO_CLIENT_ID ?? '',
+    clientSecret: process.env.MELHORENVIO_CLIENT_SECRET ?? '',
+    refreshToken: process.env.MELHORENVIO_REFRESH_TOKEN ?? '',
+    /* Cabeçalho obrigatório: a API recusa requisição sem nome da aplicação e
+       e-mail de contato. */
+    userAgent: process.env.MELHORENVIO_USER_AGENT ?? '',
+  },
 }
 
 /**
@@ -95,6 +117,39 @@ if (isProduction && config.paymentProvider !== 'manual' && !config.paymentWebhoo
       '         para confirmar que a notificação veio mesmo da processadora.\n',
   )
   process.exit(1)
+}
+
+if (config.shippingProvider === 'melhorenvio') {
+  if (!config.melhorEnvio.token) {
+    console.error('\n[config] SHIPPING_PROVIDER=melhorenvio exige MELHORENVIO_TOKEN.\n')
+    process.exit(1)
+  }
+
+  if (!config.melhorEnvio.userAgent) {
+    console.error(
+      '\n[config] MELHORENVIO_USER_AGENT é obrigatório: a API recusa requisição\n' +
+        '         sem nome da aplicação e e-mail de contato.\n' +
+        '         Exemplo: "TOTALPACK (contato@totalpack.app.br)"\n',
+    )
+    process.exit(1)
+  }
+
+  /* Mesmo guarda do Asaas: apontar a chave de produção para o sandbox (ou o
+     contrário) só aparece quando a etiqueta errada já foi comprada. */
+  const ehSandbox = config.melhorEnvio.baseUrl.includes('sandbox')
+  if (isProduction && ehSandbox) {
+    console.warn(
+      '\n[config] ATENÇÃO: em produção apontando para o sandbox do Melhor Envio.\n' +
+        '         As etiquetas geradas aqui não valem para postagem.\n',
+    )
+  }
+
+  if (!config.melhorEnvio.refreshToken || !config.melhorEnvio.clientId) {
+    console.warn(
+      '\n[config] Melhor Envio sem dados de renovação (CLIENT_ID/REFRESH_TOKEN).\n' +
+        '         O token vale 30 dias e a emissão vai parar quando ele vencer.\n',
+    )
+  }
 }
 
 if (isProduction && config.jwtSecret.length < 32) {
