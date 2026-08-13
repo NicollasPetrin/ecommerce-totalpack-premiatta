@@ -119,36 +119,44 @@ if (isProduction && config.paymentProvider !== 'manual' && !config.paymentWebhoo
   process.exit(1)
 }
 
+/**
+ * Conferência da transportadora.
+ *
+ * Ao contrário do pagamento, aqui **não derrubamos o processo**: emitir
+ * etiqueta é um recurso do painel, e falta de configuração nele não pode tirar
+ * a loja inteira do ar. Uma configuração incompleta volta para 'manual' — as
+ * vendas seguem, só a emissão fica desligada, com o motivo no log.
+ */
 if (config.shippingProvider === 'melhorenvio') {
-  if (!config.melhorEnvio.token) {
-    console.error('\n[config] SHIPPING_PROVIDER=melhorenvio exige MELHORENVIO_TOKEN.\n')
-    process.exit(1)
-  }
+  const faltando = []
+  if (!config.melhorEnvio.token) faltando.push('MELHORENVIO_TOKEN')
+  // A API recusa requisição sem nome da aplicação e e-mail de contato.
+  if (!config.melhorEnvio.userAgent) faltando.push('MELHORENVIO_USER_AGENT')
 
-  if (!config.melhorEnvio.userAgent) {
+  if (faltando.length) {
     console.error(
-      '\n[config] MELHORENVIO_USER_AGENT é obrigatório: a API recusa requisição\n' +
-        '         sem nome da aplicação e e-mail de contato.\n' +
-        '         Exemplo: "TOTALPACK (contato@totalpack.app.br)"\n',
+      `\n[config] Melhor Envio desligado: falta ${faltando.join(' e ')}.\n` +
+        '         A loja continua vendendo; só a emissão de etiqueta fica off.\n' +
+        '         MELHORENVIO_USER_AGENT precisa ter nome e e-mail, por exemplo:\n' +
+        '         "TOTALPACK (contato@totalpack.app.br)"\n',
     )
-    process.exit(1)
-  }
+    config.shippingProvider = 'manual'
+  } else {
+    /* Mesmo cuidado do Asaas: apontar produção para o sandbox (ou o contrário)
+       só aparece quando a etiqueta errada já foi comprada. */
+    if (isProduction && config.melhorEnvio.baseUrl.includes('sandbox')) {
+      console.warn(
+        '\n[config] ATENÇÃO: em produção apontando para o sandbox do Melhor Envio.\n' +
+          '         As etiquetas geradas aqui não valem para postagem.\n',
+      )
+    }
 
-  /* Mesmo guarda do Asaas: apontar a chave de produção para o sandbox (ou o
-     contrário) só aparece quando a etiqueta errada já foi comprada. */
-  const ehSandbox = config.melhorEnvio.baseUrl.includes('sandbox')
-  if (isProduction && ehSandbox) {
-    console.warn(
-      '\n[config] ATENÇÃO: em produção apontando para o sandbox do Melhor Envio.\n' +
-        '         As etiquetas geradas aqui não valem para postagem.\n',
-    )
-  }
-
-  if (!config.melhorEnvio.refreshToken || !config.melhorEnvio.clientId) {
-    console.warn(
-      '\n[config] Melhor Envio sem dados de renovação (CLIENT_ID/REFRESH_TOKEN).\n' +
-        '         O token vale 30 dias e a emissão vai parar quando ele vencer.\n',
-    )
+    if (!config.melhorEnvio.refreshToken || !config.melhorEnvio.clientId) {
+      console.warn(
+        '\n[config] Melhor Envio sem dados de renovação (CLIENT_ID/REFRESH_TOKEN).\n' +
+          '         O token vale 30 dias e a emissão vai parar quando ele vencer.\n',
+      )
+    }
   }
 }
 
