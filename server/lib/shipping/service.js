@@ -1,5 +1,89 @@
-import { one, transaction } from '../../db/pool.js'
+import { many, one, transaction } from '../../db/pool.js'
+import { config } from '../../config.js'
 import { getShippingProvider } from './index.js'
+
+/**
+ * Cotação para a loja: quanto o cliente vai pagar de frete.
+ *
+ * As medidas vêm sempre do banco, nunca do navegador — quem manda o peso
+ * decide o preço, e isso é a mesma classe de furo que deixar o navegador
+ * mandar o preço do produto.
+ *
+ * Devolve `{ options, erro }` em vez de lançar: erro de cotação é resposta
+ * legítima para o cliente ("não entregamos aí"), não falha do servidor.
+ */
+export async function quoteForCart({ cep, itens }) {
+  const destino = String(cep ?? '').replace(/\D/g, '')
+  if (destino.length !== 8) return { options: [], erro: 'CEP incompleto.' }
+  if (!itens.length) return { options: [], erro: 'Sacola vazia.' }
+
+  const cfg = await one(`SELECT * FROM settings WHERE id = true`)
+  if (!cfg.sender_cep) {
+    return { options: [], erro: 'A loja ainda não configurou o endereço de origem.' }
+  }
+
+  /* Produto sem medida não pode ser cotado. Cair num valor padrão faria a
+     loja cobrar um frete e pagar outro, sem ninguém perceber. */
+  const semMedida = itens.filter(
+    (i) => !i.weightG || !i.lengthCm || !i.widthCm || !i.heightCm,
+  )
+  if (semMedida.length) {
+    return {
+      options: [],
+      erro: 'Um dos itens está sem peso ou medidas cadastradas.',
+      detalhe: semMedida.map((i) => i.name),
+    }
+  }
+
+  try {
+    const servicos = await getShippingProvider(config.shippingProvider).cotar({
+      remetente: { cep: cfg.sender_cep },
+      destinatario: { cep: destino },
+      itens,
+    })
+
+    if (!servicos.length) return { options: [], erro: 'Nenhuma transportadora atende este CEP.' }
+    return { options: servicos }
+  } catch (err) {
+    console.error('[frete] cotação falhou:', err.message)
+    return { options: [], erro: 'Não foi possível calcular o frete agora. Tente em instantes.' }
+  }
+}
+
+/**
+ * Carrega os itens da sacola com as medidas do catálogo.
+ *
+ * Recebe só ids e quantidades; tudo que influencia preço vem do banco.
+ */
+export async function itensComMedidas(linhas) {
+  if (!linhas.length) return []
+
+  const produtos = await many(
+    `SELECT id, name, price, promo, weight_g, length_cm, width_cm, height_cm
+       FROM products WHERE id = ANY($1::uuid[]) AND active`,
+    [linhas.map((l) => l.productId)],
+  )
+  const porId = new Map(produtos.map((p) => [p.id, p]))
+
+  return linhas
+    .map((l) => {
+      const p = porId.get(l.productId)
+      if (!p) return null
+      return {
+        id: p.id,
+        name: p.name,
+        qty: l.qty,
+        price: Number(p.promo) > 0 && Number(p.promo) < Number(p.price)
+          ? Number(p.promo)
+          : Number(p.price),
+        weightG: Number(p.weight_g ?? 0),
+        lengthCm: Number(p.length_cm ?? 0),
+        widthCm: Number(p.width_cm ?? 0),
+        heightCm: Number(p.height_cm ?? 0),
+      }
+    })
+    .filter(Boolean)
+}
 
 /**
  * Regras de envio que não dependem de transportadora.

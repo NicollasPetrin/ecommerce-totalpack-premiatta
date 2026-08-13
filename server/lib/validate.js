@@ -297,6 +297,9 @@ export const schemas = {
           }),
         )
         .min(1, 'Sacola vazia.'),
+      /* Qual serviço de frete o cliente escolheu. É só uma referência: o
+         servidor recota e usa o preço dele, nunca o que veio no corpo. */
+      shippingServiceId: z.string().trim().max(40).optional(),
       name: z.string().trim().min(3, 'Informe o nome completo.'),
       email: z.string().trim().toLowerCase().email('E-mail inválido.').or(z.literal('')),
       phone: z.string().trim().min(10, 'Telefone incompleto.'),

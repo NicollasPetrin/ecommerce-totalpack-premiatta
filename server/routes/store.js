@@ -6,7 +6,9 @@ import {
   clearSession, requireAdmin, setSession, verifyPassword, hashPassword,
 } from '../lib/auth.js'
 import { findOverlaps, findZone } from '../lib/zones.js'
-import { limiteLogin } from '../lib/ratelimit.js'
+import { limiteLogin, limiteExterno } from '../lib/ratelimit.js'
+import { config } from '../config.js'
+import { itensComMedidas, quoteForCart } from '../lib/shipping/service.js'
 import * as s from '../lib/serialize.js'
 
 export const storeRoutes = Router()
@@ -71,6 +73,34 @@ storeRoutes.get(
     res.json({
       zone: { id: zone.id, name: zone.name, fee: Number(zone.fee), days: zone.days },
     })
+  }),
+)
+
+/**
+ * Opções reais de frete para a sacola, quando há transportadora integrada.
+ *
+ * Recebe só ids e quantidades: peso, medida e preço saem do banco. Passa pelo
+ * limite das rotas externas porque cada chamada aqui consome cota da conta da
+ * transportadora — e esta é uma rota pública, aberta a qualquer visitante.
+ */
+storeRoutes.post(
+  '/shipping/options',
+  limiteExterno,
+  wrap(async (req, res) => {
+    if (config.shippingProvider === 'manual') {
+      // Sem integração, quem responde é a tabela de faixas de CEP.
+      return res.json({ provider: 'manual', options: [] })
+    }
+
+    const linhas = Array.isArray(req.body?.items) ? req.body.items.slice(0, 60) : []
+    const itens = await itensComMedidas(
+      linhas
+        .filter((l) => typeof l?.productId === 'string')
+        .map((l) => ({ productId: l.productId, qty: Math.max(1, Number(l.qty) || 1) })),
+    )
+
+    const r = await quoteForCart({ cep: req.body?.cep, itens })
+    res.json({ provider: config.shippingProvider, ...r })
   }),
 )
 

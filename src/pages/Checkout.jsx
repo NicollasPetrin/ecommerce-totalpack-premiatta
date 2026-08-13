@@ -32,6 +32,8 @@ export default function Checkout() {
   const {
     cartLines, subtotal, shipping, settings, placeOrder, toast,
     cep, setCep, zone, outOfRange, freeShipping,
+    freteIntegrado, freteOpcoes, freteEscolhido, setFreteEscolhido,
+    freteErro, freteCarregando, semEntrega,
     currentCustomer, defaultAddress,
   } = useStore()
   const navigate = useNavigate()
@@ -150,7 +152,8 @@ export default function Checkout() {
     }
 
     if (form.cep.replace(/\D/g, '').length !== 8) e.cep = 'CEP incompleto.'
-    else if (outOfRange) e.cep = 'Ainda não entregamos neste CEP.'
+    else if (semEntrega) e.cep = freteErro || 'Ainda não entregamos neste CEP.'
+    else if (freteIntegrado && !freteEscolhido) e.cep = 'Escolha uma forma de envio.'
     if (!form.address.trim()) e.address = 'Informe a rua.'
     if (!form.number.trim()) e.number = 'Informe o número.'
     if (!form.district.trim()) e.district = 'Informe o bairro.'
@@ -316,12 +319,60 @@ export default function Checkout() {
             </h2>
 
             <p className="panel__lead">
-              {freeShipping
-                ? 'Frete grátis neste pedido.'
-                : zone
-                  ? `${money(zone.fee)} · chega em ${zoneDeadline(zone)}.`
-                  : 'Informe o CEP abaixo para ver o valor do frete.'}
+              {freteIntegrado
+                ? 'Informe o CEP e escolha como quer receber.'
+                : freeShipping
+                  ? 'Frete grátis neste pedido.'
+                  : zone
+                    ? `${money(zone.fee)} · chega em ${zoneDeadline(zone)}.`
+                    : 'Informe o CEP abaixo para ver o valor do frete.'}
             </p>
+
+            {/* Opções reais da transportadora. Só aparece com integração
+                ligada; sem ela o valor continua vindo da tabela de CEP. */}
+            {freteIntegrado && (
+              <div className="freteopts">
+                {freteCarregando && <p className="hint">Calculando o frete…</p>}
+
+                {!freteCarregando && freteErro && (
+                  <p className="err">
+                    <Icon name="alert" size={14} /> {freteErro}
+                  </p>
+                )}
+
+                {!freteCarregando &&
+                  !freteErro &&
+                  Array.isArray(freteOpcoes) &&
+                  freteOpcoes.length > 0 && (
+                    <ul className="freteopts__list" role="radiogroup" aria-label="Forma de envio">
+                      {freteOpcoes.map((o) => {
+                        const marcado = freteEscolhido?.servicoId === o.servicoId
+                        return (
+                          <li key={o.servicoId}>
+                            <button
+                              type="button"
+                              role="radio"
+                              aria-checked={marcado}
+                              className={`freteopt${marcado ? ' is-on' : ''}`}
+                              onClick={() => setFreteEscolhido(o)}
+                            >
+                              <span className="freteopt__nome">
+                                <strong>{o.transportadora}</strong> {o.nome}
+                                <em>
+                                  {o.prazoDias === 1
+                                    ? 'chega em 1 dia útil'
+                                    : `chega em ${o.prazoDias} dias úteis`}
+                                </em>
+                              </span>
+                              <span className="freteopt__preco">{money(o.preco)}</span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+              </div>
+            )}
 
             {savedAddresses.length > 0 && (
               <div className="savedaddr">

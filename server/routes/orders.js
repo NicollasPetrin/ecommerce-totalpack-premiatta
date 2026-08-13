@@ -4,6 +4,8 @@ import { wrap, badRequest, notFound, conflict } from '../lib/http.js'
 import { parse, schemas, validarUuid } from '../lib/validate.js'
 import { requireAdmin } from '../lib/auth.js'
 import { findZone, normalizeCep } from '../lib/zones.js'
+import { config } from '../config.js'
+import { itensComMedidas, quoteForCart } from '../lib/shipping/service.js'
 import { createCharge, latestPayment, syncCharge } from '../lib/payments/service.js'
 import { restoreStock } from '../lib/stock.js'
 import { limitePedido, limiteExterno } from '../lib/ratelimit.js'
@@ -61,11 +63,44 @@ orderRoutes.post(
 
     const settings = await one(`SELECT * FROM settings WHERE id = true`)
 
-    // Todo pedido é entrega — a retirada saiu da loja. Frete conferido antes
-    // da transação: erro de área não deve travar linhas de produto.
-    const zone = await findZone(d.cep)
-    if (!zone) {
-      throw badRequest('Ainda não entregamos neste CEP.', { cep: 'Fora da área de entrega.' })
+    /* O frete é resolvido antes da transação: erro de área não deve segurar
+       as linhas de produto travadas enquanto se fala com a transportadora. */
+    let zone = null
+    let freteCotado = null
+
+    if (config.shippingProvider === 'manual') {
+      // Tabela de faixas de CEP: o valor é o que a loja definiu.
+      zone = await findZone(d.cep)
+      if (!zone) {
+        throw badRequest('Ainda não entregamos neste CEP.', { cep: 'Fora da área de entrega.' })
+      }
+    } else {
+      /* Com transportadora integrada, o preço é dela. Recotamos aqui em vez
+         de aceitar o número do navegador — do contrário qualquer um fecharia
+         pedido com frete de um centavo. O cliente escolheu um serviço; nós
+         conferimos que ele existe e usamos o nosso preço, não o dele. */
+      const itens = await itensComMedidas(d.items)
+      const { options, erro } = await quoteForCart({ cep: d.cep, itens })
+
+      if (erro || !options.length) {
+        throw badRequest(erro ?? 'Não foi possível calcular o frete.', {
+          cep: erro ?? 'Frete indisponível.',
+        })
+      }
+
+      const escolhido = String(d.shippingServiceId ?? '')
+      if (!escolhido) {
+        throw badRequest('Escolha uma forma de envio.', {
+          cep: 'Escolha uma forma de envio.',
+        })
+      }
+
+      freteCotado = options.find((o) => o.servicoId === escolhido)
+      if (!freteCotado) {
+        // O serviço saiu da lista entre a escolha e o envio (preço muda, a
+        // transportadora sai do ar). Melhor recusar que cobrar outro valor.
+        throw conflict('A opção de frete escolhida não está mais disponível. Refaça a escolha.')
+      }
     }
 
     const order = await transaction(async (client) => {
@@ -144,8 +179,25 @@ orderRoutes.post(
       }
 
       const subtotal = lines.reduce((acc, l) => acc + l.price * l.qty, 0)
-      const free = subtotal >= Number(settings.free_shipping_from) && subtotal > 0
-      const shipping = free ? 0 : Number(zone.fee)
+
+      /* Frete grátis é uma promessa da própria loja e só existe na tabela de
+         faixas. Com transportadora integrada, quem paga é sempre o cliente —
+         foi a regra escolhida para o frete não sair do bolso da loja. */
+      let shipping
+      let zoneName
+      let zoneDays
+
+      if (freteCotado) {
+        shipping = Number(freteCotado.preco)
+        zoneName = `${freteCotado.transportadora} ${freteCotado.nome}`.trim()
+        zoneDays = Number(freteCotado.prazoDias) || 0
+      } else {
+        const free = subtotal >= Number(settings.free_shipping_from) && subtotal > 0
+        shipping = free ? 0 : Number(zone.fee)
+        zoneName = zone.name
+        zoneDays = zone.days
+      }
+
       const total = subtotal + shipping
 
       const { rows: created } = await client.query(
@@ -158,7 +210,7 @@ orderRoutes.post(
          RETURNING *`,
         [
           customerId, d.name, d.email, d.phone, d.cpfCnpj,
-          'entrega', zone.name, zone.days,
+          'entrega', zoneName, zoneDays,
           normalizeCep(d.cep), d.street, d.number, d.complement,
           d.district, d.city, d.state,
           d.payment, d.note, subtotal, shipping, total,

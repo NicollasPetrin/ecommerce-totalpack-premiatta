@@ -263,10 +263,83 @@ export function StoreProvider({ children }) {
   const cartCount = useMemo(() => cartLines.reduce((s, l) => s + l.qty, 0), [cartLines])
   const subtotal = useMemo(() => cartLines.reduce((s, l) => s + l.lineTotal, 0), [cartLines])
 
+  /* ---- Frete ----
+     Dois modos, decididos pelo servidor. Sem transportadora integrada, o
+     valor sai da tabela de faixas de CEP e vale o frete grátis. Com
+     transportadora, o cliente escolhe entre as opções reais e paga o que ela
+     cobrar — não há frete grátis nesse caso. */
+  const [freteOpcoes, setFreteOpcoes] = useState(null)
+  const [freteEscolhido, setFreteEscolhido] = useState(null)
+  const [freteErro, setFreteErro] = useState('')
+  const [freteCarregando, setFreteCarregando] = useState(false)
+  const [freteIntegrado, setFreteIntegrado] = useState(false)
+
+  /* Recotar a cada mudança de sacola ou CEP. A escolha anterior é descartada:
+     manter um preço antigo depois de mexer nos itens cobraria errado. */
+  useEffect(() => {
+    const digitos = cep.replace(/\D/g, '')
+    setFreteEscolhido(null)
+
+    if (digitos.length !== 8 || cartLines.length === 0) {
+      setFreteOpcoes(null)
+      setFreteErro('')
+      return
+    }
+
+    let cancelado = false
+    setFreteCarregando(true)
+
+    api
+      .post('/shipping/options', {
+        cep: digitos,
+        items: cartLines.map((l) => ({ productId: l.product.id, qty: l.qty })),
+      })
+      .then((r) => {
+        if (cancelado) return
+        setFreteIntegrado(r.provider !== 'manual')
+        if (r.provider === 'manual') {
+          setFreteOpcoes(null)
+          setFreteErro('')
+          return
+        }
+        setFreteOpcoes(r.options ?? [])
+        setFreteErro(r.erro ?? '')
+        // Uma opção só não é escolha: já deixa marcada.
+        if ((r.options ?? []).length === 1) setFreteEscolhido(r.options[0])
+      })
+      .catch((e) => {
+        if (!cancelado) {
+          setFreteOpcoes([])
+          setFreteErro(e.message)
+        }
+      })
+      .finally(() => {
+        if (!cancelado) setFreteCarregando(false)
+      })
+
+    return () => {
+      cancelado = true
+    }
+  }, [cep, cartLines])
+
   const freeShippingFrom = settings?.freeShippingFrom ?? 0
-  const freeShipping = subtotal >= freeShippingFrom && subtotal > 0
-  const shipping = subtotal === 0 || freeShipping ? 0 : zone ? zone.fee : null
+  const freeShipping = !freteIntegrado && subtotal >= freeShippingFrom && subtotal > 0
+
+  const shipping = freteIntegrado
+    ? (freteEscolhido?.preco ?? null)
+    : subtotal === 0 || freeShipping
+      ? 0
+      : zone
+        ? zone.fee
+        : null
+
   const total = subtotal + (shipping ?? 0)
+
+  /* Fora da área é a tabela dizendo que não atende; com transportadora, é a
+     cotação não ter trazido nenhuma opção. */
+  const semEntrega = freteIntegrado
+    ? Boolean(freteErro) || (Array.isArray(freteOpcoes) && freteOpcoes.length === 0)
+    : outOfRange
 
   const addToCart = useCallback(
     (product, qty = 1, variant = null) => {
@@ -334,6 +407,7 @@ export function StoreProvider({ children }) {
         cpfCnpj: form.cpfCnpj ?? '',
         delivery: form.delivery,
         payment: form.payment,
+        shippingServiceId: freteEscolhido?.servicoId,
         note: form.note ?? '',
         cep: form.cep ?? '',
         street: form.address ?? '',
@@ -666,6 +740,13 @@ export function StoreProvider({ children }) {
       cep,
       setCep,
       zone,
+      freteOpcoes,
+      freteEscolhido,
+      setFreteEscolhido,
+      freteErro,
+      freteCarregando,
+      freteIntegrado,
+      semEntrega,
       outOfRange,
       saveZone,
       deleteZone,
