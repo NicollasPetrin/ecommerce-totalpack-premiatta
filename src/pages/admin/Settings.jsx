@@ -113,6 +113,114 @@ export default function AdminSettings() {
 
             <hr className="rule" />
 
+            {/* Remetente da etiqueta — separado do endereço acima de propósito:
+                aquele é texto livre para mostrar no rodapé, este vai para a
+                transportadora e precisa de cada parte no seu campo. */}
+            <h3 className="apage__sub">Remetente das etiquetas</h3>
+            <p className="hint">
+              Usado só na emissão de etiqueta. Sem estes campos, a transportadora
+              recusa a postagem.
+            </p>
+
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="s-sname">Nome ou razão social</label>
+                <input
+                  id="s-sname"
+                  className="input"
+                  value={f.senderName ?? ''}
+                  onChange={set('senderName')}
+                  placeholder={f.storeName}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="s-sdoc">CNPJ ou CPF</label>
+                <input
+                  id="s-sdoc"
+                  className="input"
+                  value={f.senderDoc ?? ''}
+                  onChange={set('senderDoc')}
+                  inputMode="numeric"
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="s-scep">CEP</label>
+                <input
+                  id="s-scep"
+                  className="input"
+                  value={f.senderCep ?? ''}
+                  onChange={set('senderCep')}
+                  inputMode="numeric"
+                  placeholder="17232232"
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="s-snum">Número</label>
+                <input
+                  id="s-snum"
+                  className="input"
+                  value={f.senderNumber ?? ''}
+                  onChange={set('senderNumber')}
+                />
+              </div>
+
+              <div className="field col-2">
+                <label htmlFor="s-sstreet">Rua</label>
+                <input
+                  id="s-sstreet"
+                  className="input"
+                  value={f.senderStreet ?? ''}
+                  onChange={set('senderStreet')}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="s-scompl">Complemento</label>
+                <input
+                  id="s-scompl"
+                  className="input"
+                  value={f.senderCompl ?? ''}
+                  onChange={set('senderCompl')}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="s-sdist">Bairro</label>
+                <input
+                  id="s-sdist"
+                  className="input"
+                  value={f.senderDistrict ?? ''}
+                  onChange={set('senderDistrict')}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="s-scity">Cidade</label>
+                <input
+                  id="s-scity"
+                  className="input"
+                  value={f.senderCity ?? ''}
+                  onChange={set('senderCity')}
+                />
+              </div>
+
+              <div className="field field--uf">
+                <label htmlFor="s-sstate">UF</label>
+                <input
+                  id="s-sstate"
+                  className="input"
+                  value={f.senderState ?? ''}
+                  onChange={set('senderState')}
+                  maxLength={2}
+                />
+              </div>
+            </div>
+
+            <hr className="rule" />
+
             <div className="form-grid">
               <div className="field">
                 <label htmlFor="s-low">Alerta de estoque baixo (un.)</label>

@@ -146,6 +146,26 @@ export const payment = (r) =>
       }
     : null
 
+/** Nunca inclui `raw`: guarda a resposta crua da transportadora. */
+export const shipment = (r) =>
+  r
+    ? {
+        id: r.id,
+        orderId: r.order_id,
+        provider: r.provider,
+        externalId: r.external_id,
+        status: r.status,
+        serviceName: r.service_name,
+        carrier: r.carrier,
+        tracking: r.tracking,
+        labelUrl: r.label_url,
+        cost: Number(r.cost),
+        error: r.error,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      }
+    : null
+
 export const settings = (r) => ({
   storeName: r.store_name,
   tagline: r.tagline,
@@ -157,4 +177,14 @@ export const settings = (r) => ({
   pixKey: r.pix_key,
   freeShippingFrom: Number(r.free_shipping_from),
   lowStockThreshold: r.low_stock_threshold,
+  // Remetente da etiqueta, em campos separados.
+  senderName: r.sender_name ?? '',
+  senderDoc: r.sender_doc ?? '',
+  senderCep: r.sender_cep ?? '',
+  senderStreet: r.sender_street ?? '',
+  senderNumber: r.sender_number ?? '',
+  senderCompl: r.sender_compl ?? '',
+  senderDistrict: r.sender_district ?? '',
+  senderCity: r.sender_city ?? '',
+  senderState: r.sender_state ?? '',
 })

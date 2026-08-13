@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useStore, ORDER_STATUS, PAYMENT_LABEL } from '../../store/StoreContext'
 import { dateTime, maskCep, money, norm, orderCode } from '../../lib/format'
 import Modal, { ConfirmDialog } from '../../components/Modal'
+import ShipmentPanel from './ShipmentPanel'
 import ProductArt from '../../components/ProductArt'
 import Icon from '../../components/Icon'
 
@@ -432,6 +433,8 @@ export default function AdminOrders() {
                     <p>{current.note}</p>
                   </div>
                 )}
+
+                <ShipmentPanel order={current} toast={toast} />
               </section>
             </div>
           </div>

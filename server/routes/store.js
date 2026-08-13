@@ -31,11 +31,17 @@ storeRoutes.put(
     const row = await one(
       `UPDATE settings SET
          store_name=$1, tagline=$2, email=$3, phone=$4, address=$5, hours=$6,
-         instagram=$7, pix_key=$8, free_shipping_from=$9, low_stock_threshold=$10
+         instagram=$7, pix_key=$8, free_shipping_from=$9, low_stock_threshold=$10,
+         sender_name=$11, sender_doc=$12, sender_cep=$13, sender_street=$14,
+         sender_number=$15, sender_compl=$16, sender_district=$17,
+         sender_city=$18, sender_state=$19
        WHERE id = true RETURNING *`,
       [
         d.storeName, d.tagline, d.email, d.phone, d.address, d.hours,
         d.instagram, d.pixKey, d.freeShippingFrom, d.lowStockThreshold,
+        d.senderName, d.senderDoc, d.senderCep, d.senderStreet,
+        d.senderNumber, d.senderCompl, d.senderDistrict,
+        d.senderCity, d.senderState,
       ],
     )
     res.json({ settings: s.settings(row) })

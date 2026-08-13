@@ -260,6 +260,28 @@ export const schemas = {
     pixKey: z.string().trim().default(''),
     freeShippingFrom: money,
     lowStockThreshold: z.coerce.number().int().min(0),
+
+    /* Remetente da etiqueta. Vazio é permitido — a loja funciona sem, só não
+       emite etiqueta. O CEP guarda só dígitos, como o do pedido. */
+    senderName: z.string().trim().max(120).default(''),
+    senderDoc: z.string().trim().transform(onlyDigits).default(''),
+    senderCep: z
+      .string()
+      .trim()
+      .transform((v) => v.replace(/\D/g, ''))
+      .refine((v) => v === '' || v.length === 8, 'CEP deve ter 8 dígitos.')
+      .default(''),
+    senderStreet: z.string().trim().max(160).default(''),
+    senderNumber: z.string().trim().max(20).default(''),
+    senderCompl: z.string().trim().max(80).default(''),
+    senderDistrict: z.string().trim().max(80).default(''),
+    senderCity: z.string().trim().max(80).default(''),
+    senderState: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .refine((v) => v === '' || v.length === 2, 'UF deve ter 2 letras.')
+      .default(''),
   }),
 
   order: z

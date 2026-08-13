@@ -14,6 +14,7 @@ import { authRoutes } from './routes/auth.js'
 import { catalogRoutes } from './routes/catalog.js'
 import { orderRoutes } from './routes/orders.js'
 import { storeRoutes } from './routes/store.js'
+import { shipmentRoutes } from './routes/shipments.js'
 import { webhookRoutes } from './routes/webhooks.js'
 
 const app = express()
@@ -65,6 +66,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/orders', orderRoutes)
 app.use('/api', catalogRoutes)
 app.use('/api', storeRoutes)
+app.use('/api', shipmentRoutes)
 
 // Precisa vir antes dos arquivos estáticos: uma rota /api inexistente é erro
 // de API, não um endereço da loja para o React resolver.
