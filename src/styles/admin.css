@@ -1196,3 +1196,59 @@
   .avisofrete { flex-wrap: wrap; }
   .avisofrete .btn { width: 100%; }
 }
+
+/* Teste de conexão com a transportadora */
+.testeconn { margin: 12px 0 16px; }
+
+.testeconn__res {
+  margin-top: 11px;
+  padding: 13px 15px;
+  border-radius: var(--r-sm);
+  background: var(--orange-soft);
+  border: 1px solid color-mix(in srgb, var(--orange) 32%, transparent);
+}
+
+.testeconn__res.is-ok {
+  background: var(--green-soft);
+  border-color: color-mix(in srgb, var(--green) 32%, transparent);
+}
+
+.testeconn__res strong {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: var(--fs-footnote);
+  line-height: 1.45;
+}
+
+.testeconn__res strong svg { flex: none; margin-top: 2px; color: var(--orange); }
+.testeconn__res.is-ok strong svg { color: var(--green); }
+
+.testeconn__cfg {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 14px;
+  margin-top: 11px;
+  font-size: var(--fs-caption);
+}
+
+.testeconn__cfg > div { display: contents; }
+.testeconn__cfg dt { color: var(--label-3); }
+.testeconn__cfg dd { color: var(--label); overflow-wrap: anywhere; }
+
+.testeconn__srv {
+  margin-top: 10px;
+  font-size: var(--fs-caption);
+  color: var(--label-2);
+}
+
+.testeconn__cru {
+  margin-top: 9px;
+  padding: 8px 10px;
+  border-radius: var(--r-xs);
+  background: var(--bg-sunken);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

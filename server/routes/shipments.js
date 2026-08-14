@@ -6,7 +6,7 @@ import { requireAdmin } from '../lib/auth.js'
 import { limiteExterno } from '../lib/ratelimit.js'
 import { config } from '../config.js'
 import { currentShippingProvider } from '../lib/shipping/index.js'
-import { buyLabel, createShipment, syncShipment } from '../lib/shipping/service.js'
+import { buyLabel, createShipment, quoteForCart, syncShipment } from '../lib/shipping/service.js'
 import * as s from '../lib/serialize.js'
 
 export const shipmentRoutes = Router()
@@ -92,6 +92,89 @@ function exigirPronto({ faltando, semMedida }) {
   }
   if (problemas.length) throw badRequest(problemas.join(' '))
 }
+
+/**
+ * Teste de conexão com a transportadora.
+ *
+ * Existe porque o erro de credencial só aparecia no checkout, e a mensagem que
+ * o cliente vê é (corretamente) genérica. Aqui o admin dispara uma cotação de
+ * mentira com medidas fixas e recebe o retorno cru.
+ *
+ * Nunca devolve o token — só o suficiente para saber se ele existe, de que
+ * ambiente é e se combina com o endereço configurado.
+ */
+shipmentRoutes.post(
+  '/shipping/test',
+  limiteExterno,
+  wrap(async (req, res) => {
+    const cfg = await one(`SELECT * FROM settings WHERE id = true`)
+    const me = config.melhorEnvio
+
+    const ambienteUrl = me.baseUrl.includes('sandbox') ? 'sandbox' : 'produção'
+    const configuracao = {
+      provedor: config.shippingProvider,
+      endereco: me.baseUrl,
+      ambienteDoEndereco: ambienteUrl,
+      tokenPresente: Boolean(me.token),
+      tokenTamanho: me.token.length,
+      userAgent: me.userAgent || '(vazio — a API recusa sem isto)',
+      renovacaoConfigurada: Boolean(me.clientId && me.refreshToken),
+      remetenteCep: cfg.sender_cep || '(vazio)',
+    }
+
+    if (config.shippingProvider === 'manual') {
+      return res.json({
+        ok: false,
+        configuracao,
+        conclusao: 'SHIPPING_PROVIDER ainda está em "manual". Nenhuma chamada foi feita.',
+      })
+    }
+
+    // Cotação de mentira: origem e destino conhecidos, caixa pequena.
+    const origem = cfg.sender_cep || '01310100'
+    const r = await quoteForCart({
+      cep: '01310100',
+      itens: [
+        {
+          id: '00000000-0000-0000-0000-000000000000',
+          name: 'Teste de conexão',
+          qty: 1,
+          price: 10,
+          weightG: 300,
+          lengthCm: 20,
+          widthCm: 15,
+          heightCm: 5,
+        },
+      ],
+    })
+
+    let conclusao
+    if (r.options?.length) {
+      conclusao = `Conexão certa. ${r.options.length} serviço(s) responderam para ${origem} → 01310-100.`
+    } else if (/unauthenticated|unauthorized|401/i.test(r.causa ?? '')) {
+      conclusao =
+        'O token foi recusado. Confira se ele é do mesmo ambiente do endereço ' +
+        `(${ambienteUrl}) e se não venceu — ele vale 30 dias.`
+    } else if (/403|scope|permiss/i.test(r.causa ?? '')) {
+      conclusao =
+        'O token existe mas não tem permissão para cotar. Na aplicação do Melhor ' +
+        'Envio, marque o escopo de cálculo de frete e gere o token de novo.'
+    } else if (/404/i.test(r.causa ?? '')) {
+      conclusao = `Endereço da API não encontrado. Confira MELHORENVIO_BASE_URL (${me.baseUrl}).`
+    } else {
+      conclusao = r.causa ?? r.erro ?? 'Sem serviços para este trajeto.'
+    }
+
+    res.json({
+      ok: Boolean(r.options?.length),
+      configuracao,
+      servicos: r.options ?? [],
+      causa: r.causa ?? null,
+      corpo: r.corpo ?? null,
+      conclusao,
+    })
+  }),
+)
 
 /* --------------------------------------------------------------- Consulta */
 

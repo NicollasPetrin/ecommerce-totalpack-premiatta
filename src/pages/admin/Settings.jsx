@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../../store/StoreContext'
 import Icon from '../../components/Icon'
+import { api } from '../../lib/api'
 
 export default function AdminSettings() {
   const { settings, saveSettings, changePassword, toast } = useStore()
@@ -14,6 +15,8 @@ export default function AdminSettings() {
   const [saving, setSaving] = useState(false)
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
   const [pwError, setPwError] = useState('')
+  const [teste, setTeste] = useState(null)
+  const [testando, setTestando] = useState(false)
 
   /* O que ainda falta para a transportadora aceitar o endereço de origem. */
   const faltamRemetente = [
@@ -134,6 +137,75 @@ export default function AdminSettings() {
               Usado na cotação e na emissão da etiqueta. Sem estes campos, a
               transportadora não calcula o frete nem aceita a postagem.
             </p>
+
+            {/* Teste de conexão: dispara uma cotação de mentira e mostra o
+                retorno cru da transportadora, sem precisar ir ao checkout. */}
+            <div className="testeconn">
+              <button
+                type="button"
+                className="btn btn--outline btn--sm"
+                disabled={testando}
+                onClick={async () => {
+                  setTestando(true)
+                  setTeste(null)
+                  try {
+                    setTeste(await api.post('/shipping/test'))
+                  } catch (err) {
+                    setTeste({ ok: false, conclusao: err.message })
+                  } finally {
+                    setTestando(false)
+                  }
+                }}
+              >
+                <Icon name="refresh" size={15} />
+                {testando ? 'Testando…' : 'Testar conexão com a transportadora'}
+              </button>
+
+              {teste && (
+                <div className={`testeconn__res${teste.ok ? ' is-ok' : ''}`}>
+                  <strong>
+                    <Icon name={teste.ok ? 'checkCircle' : 'alert'} size={15} /> {teste.conclusao}
+                  </strong>
+
+                  {teste.configuracao && (
+                    <dl className="testeconn__cfg">
+                      <div><dt>Provedor</dt><dd>{teste.configuracao.provedor}</dd></div>
+                      <div><dt>Endereço da API</dt><dd>{teste.configuracao.endereco}</dd></div>
+                      <div><dt>Ambiente</dt><dd>{teste.configuracao.ambienteDoEndereco}</dd></div>
+                      <div>
+                        <dt>Token</dt>
+                        <dd>
+                          {teste.configuracao.tokenPresente
+                            ? `presente (${teste.configuracao.tokenTamanho} caracteres)`
+                            : 'ausente'}
+                        </dd>
+                      </div>
+                      <div><dt>User-Agent</dt><dd>{teste.configuracao.userAgent}</dd></div>
+                      <div>
+                        <dt>Renovação automática</dt>
+                        <dd>{teste.configuracao.renovacaoConfigurada ? 'configurada' : 'não'}</dd>
+                      </div>
+                      <div><dt>CEP de origem</dt><dd>{teste.configuracao.remetenteCep}</dd></div>
+                    </dl>
+                  )}
+
+                  {teste.servicos?.length > 0 && (
+                    <ul className="testeconn__srv">
+                      {teste.servicos.map((sv) => (
+                        <li key={sv.servicoId}>
+                          {sv.transportadora} {sv.nome} — R$ {sv.preco} · {sv.prazoDias} dia(s)
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {teste.causa && <p className="testeconn__cru">{teste.causa}</p>}
+                  {teste.corpo && (
+                    <p className="testeconn__cru">{JSON.stringify(teste.corpo).slice(0, 400)}</p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {faltamRemetente.length > 0 && (
               <div className="avisofrete avisofrete--inline">
