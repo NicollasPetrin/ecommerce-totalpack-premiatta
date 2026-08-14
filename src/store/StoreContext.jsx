@@ -478,6 +478,14 @@ export function StoreProvider({ children }) {
       specs: data.specs ?? [],
       featured: Boolean(data.featured),
       active: Boolean(data.active),
+      // Medidas do pacote, para a transportadora cotar e emitir a etiqueta.
+      weightG: data.weightG ?? 0,
+      lengthCm: data.lengthCm ?? 0,
+      widthCm: data.widthCm ?? 0,
+      heightCm: data.heightCm ?? 0,
+      // Grade de variação: eixos e as combinações geradas a partir deles.
+      variantAxes: data.variantAxes ?? [],
+      variants: data.variants ?? [],
     }
 
     const { product } = data.id
