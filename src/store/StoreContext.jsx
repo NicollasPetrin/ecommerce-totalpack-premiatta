@@ -271,6 +271,9 @@ export function StoreProvider({ children }) {
   const [freteOpcoes, setFreteOpcoes] = useState(null)
   const [freteEscolhido, setFreteEscolhido] = useState(null)
   const [freteErro, setFreteErro] = useState('')
+  /* Causa técnica da falha. Só chega para admin — serve para diagnosticar
+     sem precisar abrir o log do servidor. */
+  const [freteCausa, setFreteCausa] = useState('')
   const [freteCarregando, setFreteCarregando] = useState(false)
   const [freteIntegrado, setFreteIntegrado] = useState(false)
 
@@ -304,6 +307,11 @@ export function StoreProvider({ children }) {
         }
         setFreteOpcoes(r.options ?? [])
         setFreteErro(r.erro ?? '')
+        setFreteCausa(
+          r.causa
+            ? `${r.causa}${r.corpo ? ` — ${JSON.stringify(r.corpo).slice(0, 300)}` : ''}`
+            : '',
+        )
         // Uma opção só não é escolha: já deixa marcada.
         if ((r.options ?? []).length === 1) setFreteEscolhido(r.options[0])
       })
@@ -752,6 +760,7 @@ export function StoreProvider({ children }) {
       freteEscolhido,
       setFreteEscolhido,
       freteErro,
+      freteCausa,
       freteCarregando,
       freteIntegrado,
       semEntrega,

@@ -2742,3 +2742,17 @@
 }
 
 .freteopt.is-on .freteopt__preco { color: var(--accent); }
+
+.freteopts__causa {
+  margin-top: 8px;
+  padding: 9px 11px;
+  border-radius: var(--r-sm);
+  background: var(--bg-sunken);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--label-2);
+  overflow-wrap: anywhere;
+}
+
+.freteopts__causa strong { font-family: var(--font); color: var(--label); }

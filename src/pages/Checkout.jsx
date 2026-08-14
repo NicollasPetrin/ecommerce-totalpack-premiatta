@@ -33,7 +33,7 @@ export default function Checkout() {
     cartLines, subtotal, shipping, settings, placeOrder, toast,
     cep, setCep, zone, outOfRange, freeShipping,
     freteIntegrado, freteOpcoes, freteEscolhido, setFreteEscolhido,
-    freteErro, freteCarregando, semEntrega,
+    freteErro, freteCausa, freteCarregando, semEntrega,
     currentCustomer, defaultAddress,
   } = useStore()
   const navigate = useNavigate()
@@ -337,6 +337,14 @@ export default function Checkout() {
                 {!freteCarregando && freteErro && (
                   <p className="err">
                     <Icon name="alert" size={14} /> {freteErro}
+                  </p>
+                )}
+
+                {/* Só chega para quem está logado no painel: o cliente não tem
+                    o que fazer com a mensagem crua da transportadora. */}
+                {freteCausa && (
+                  <p className="freteopts__causa">
+                    <strong>Diagnóstico (visível só para o administrador):</strong> {freteCausa}
                   </p>
                 )}
 

@@ -100,7 +100,16 @@ storeRoutes.post(
     )
 
     const r = await quoteForCart({ cep: req.body?.cep, itens })
-    res.json({ provider: config.shippingProvider, ...r })
+
+    // O diagnóstico da transportadora só sai para quem administra a loja.
+    const { causa, corpo, ...publico } = r
+    const ehAdmin = req.user?.role === 'admin'
+
+    res.json({
+      provider: config.shippingProvider,
+      ...publico,
+      ...(ehAdmin && causa ? { causa, corpo } : {}),
+    })
   }),
 )
 

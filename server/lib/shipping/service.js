@@ -45,8 +45,16 @@ export async function quoteForCart({ cep, itens }) {
     if (!servicos.length) return { options: [], erro: 'Nenhuma transportadora atende este CEP.' }
     return { options: servicos }
   } catch (err) {
-    console.error('[frete] cotação falhou:', err.message)
-    return { options: [], erro: 'Não foi possível calcular o frete agora. Tente em instantes.' }
+    console.error('[frete] cotação falhou:', err.message, err.body ?? '')
+    return {
+      options: [],
+      erro: 'Não foi possível calcular o frete agora. Tente em instantes.',
+      /* A causa real vai junto, mas só o admin recebe (ver a rota). O cliente
+         não tem o que fazer com "401 Unauthenticated", e a mensagem da
+         transportadora pode revelar detalhe da conta. */
+      causa: err.message,
+      corpo: err.body ?? null,
+    }
   }
 }
 
