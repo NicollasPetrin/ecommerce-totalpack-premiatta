@@ -800,6 +800,8 @@ export function StoreProvider({ children }) {
       cart, cartLines, cartCount, subtotal, shipping, total, freeShipping,
       addToCart, setQty, removeFromCart, clearCart, cartOpen,
       cep, zone, outOfRange, saveZone, deleteZone, toggleZone,
+      freteOpcoes, freteEscolhido, freteErro, freteCausa, freteCarregando,
+      freteIntegrado, semEntrega,
       placeOrder, updateOrderStatus, deleteOrder, rechargeOrder, syncOrderPayment,
       isAdmin, login, logout, changePassword, saveProduct, deleteProduct,
       toggleProduct, saveCategory, deleteCategory, saveSettings, loadPublic,
