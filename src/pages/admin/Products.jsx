@@ -114,6 +114,11 @@ export default function AdminProducts() {
     baixo: products.filter((p) => p.stock <= settings.lowStockThreshold).length,
   }
 
+  /* Só os ativos: produto desativado não vende, então não bloqueia ninguém. */
+  const semMedidas = products.filter(
+    (p) => p.active && !(p.weightG > 0 && p.lengthCm > 0 && p.widthCm > 0 && p.heightCm > 0),
+  )
+
   return (
     <>
       <header className="apage__head">
@@ -128,6 +133,33 @@ export default function AdminProducts() {
           <Icon name="plus" size={16} /> Novo produto
         </button>
       </header>
+
+      {/* Produto sem medida não pode ser enviado. Sem este aviso, a falta só
+          apareceria no checkout do cliente — que é tarde demais. */}
+      {semMedidas.length > 0 && (
+        <div className="avisofrete">
+          <Icon name="alert" size={18} />
+          <div>
+            <strong>
+              {semMedidas.length === 1
+                ? '1 produto sem peso e medidas'
+                : `${semMedidas.length} produtos sem peso e medidas`}
+            </strong>
+            <p>
+              Enquanto faltar peso, altura, largura e comprimento, a transportadora
+              não cotará o frete destes itens e o cliente não conseguirá finalizar
+              a compra: {semMedidas.slice(0, 4).map((p) => p.name).join(', ')}
+              {semMedidas.length > 4 && ` e mais ${semMedidas.length - 4}`}.
+            </p>
+          </div>
+          <button
+            className="btn btn--primary btn--sm"
+            onClick={() => setEditing(semMedidas[0])}
+          >
+            Preencher agora
+          </button>
+        </div>
+      )}
 
       <div className="atoolbar">
         <div className="asearch">

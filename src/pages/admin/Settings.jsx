@@ -15,6 +15,19 @@ export default function AdminSettings() {
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
   const [pwError, setPwError] = useState('')
 
+  /* O que ainda falta para a transportadora aceitar o endereço de origem. */
+  const faltamRemetente = [
+    ['senderDoc', 'CNPJ ou CPF'],
+    ['senderCep', 'CEP'],
+    ['senderStreet', 'rua'],
+    ['senderNumber', 'número'],
+    ['senderDistrict', 'bairro'],
+    ['senderCity', 'cidade'],
+    ['senderState', 'UF'],
+  ]
+    .filter(([campo]) => !String(f[campo] ?? '').trim())
+    .map(([, rotulo]) => rotulo)
+
   const set = (key) => (e) =>
     setF((old) => ({
       ...old,
@@ -118,9 +131,22 @@ export default function AdminSettings() {
                 transportadora e precisa de cada parte no seu campo. */}
             <h3 className="apage__sub">Remetente das etiquetas</h3>
             <p className="hint">
-              Usado só na emissão de etiqueta. Sem estes campos, a transportadora
-              recusa a postagem.
+              Usado na cotação e na emissão da etiqueta. Sem estes campos, a
+              transportadora não calcula o frete nem aceita a postagem.
             </p>
+
+            {faltamRemetente.length > 0 && (
+              <div className="avisofrete avisofrete--inline">
+                <Icon name="alert" size={18} />
+                <div>
+                  <strong>Remetente incompleto</strong>
+                  <p>
+                    Falta preencher: {faltamRemetente.join(', ')}. Sem isso o frete
+                    não é calculado e ninguém consegue finalizar a compra.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="form-grid">
               <div className="field">
