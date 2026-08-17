@@ -159,8 +159,14 @@ shipmentRoutes.post(
       conclusao =
         'O token existe mas não tem permissão para cotar. Na aplicação do Melhor ' +
         'Envio, marque o escopo de cálculo de frete e gere o token de novo.'
-    } else if (/404/i.test(r.causa ?? '')) {
+    } else if (/HTTP 404/i.test(r.causa ?? '')) {
       conclusao = `Endereço da API não encontrado. Confira MELHORENVIO_BASE_URL (${me.baseUrl}).`
+    } else if (/falha de rede/i.test(r.causa ?? '')) {
+      conclusao =
+        'A requisição não chegou a sair do servidor. Costuma ser cabeçalho ' +
+        'inválido (espaço ou quebra de linha na chave) ou o endereço da API errado.'
+    } else if (/HTTP 5\d\d/i.test(r.causa ?? '')) {
+      conclusao = 'O Melhor Envio respondeu com erro interno. Tente de novo em alguns minutos.'
     } else {
       conclusao = r.causa ?? r.erro ?? 'Sem serviços para este trajeto.'
     }

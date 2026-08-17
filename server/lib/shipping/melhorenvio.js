@@ -30,24 +30,35 @@ const STATUS = {
 
 async function call(caminho, opts = {}) {
   const { baseUrl, token, userAgent } = cfg()
+  const url = `${baseUrl}/api/v2${caminho}`
 
-  const r = await fetch(`${baseUrl}/api/v2${caminho}`, {
-    ...opts,
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      // Obrigatório: a API recusa requisição sem isto.
-      'User-Agent': userAgent,
-      ...opts.headers,
-    },
-  })
+  let r
+  try {
+    r = await fetch(url, {
+      ...opts,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        // Obrigatório: a API recusa requisição sem isto.
+        'User-Agent': userAgent,
+        ...opts.headers,
+      },
+    })
+  } catch (e) {
+    /* Falha antes de haver resposta: DNS, TLS, rede, ou cabeçalho inválido.
+       Sem isto o erro chegaria como "fetch failed", que não diz nada. */
+    const err = new Error(`[melhorenvio] falha de rede ao chamar ${url}: ${e.message}`)
+    err.body = { causa: e.cause?.message ?? String(e), url }
+    throw err
+  }
 
   const texto = await r.text()
   let corpo
   try {
     corpo = texto ? JSON.parse(texto) : {}
   } catch {
+    // Resposta que não é JSON costuma ser página de erro ou de login.
     corpo = { raw: texto.slice(0, 400) }
   }
 
@@ -57,8 +68,12 @@ async function call(caminho, opts = {}) {
       corpo?.message ??
       corpo?.error ??
       (corpo?.errors && Object.values(corpo.errors).flat().join('; ')) ??
-      `HTTP ${r.status}`
-    const err = new Error(`[melhorenvio] ${detalhe}`)
+      corpo?.raw ??
+      'sem detalhe'
+
+    // O status vai sempre na mensagem: é o que separa credencial (401),
+    // permissão (403) e endereço errado (404).
+    const err = new Error(`[melhorenvio] HTTP ${r.status} em ${caminho} — ${detalhe}`)
     err.status = r.status
     err.body = corpo
     throw err

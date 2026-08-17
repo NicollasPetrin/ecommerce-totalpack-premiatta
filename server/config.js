@@ -59,8 +59,19 @@ export const config = {
   melhorEnvio: {
     baseUrl: (
       process.env.MELHORENVIO_BASE_URL ?? 'https://sandbox.melhorenvio.com.br'
-    ).replace(/\/+$/, ''),
-    token: process.env.MELHORENVIO_TOKEN ?? '',
+    )
+      .trim()
+      .replace(/\/+$/, ''),
+    /* Duas armadilhas de quem cola a chave no painel do Railway, e as duas
+       dão 401 sem explicar por quê:
+       - colar já com "Bearer " na frente, virando "Bearer Bearer …";
+       - trazer espaço ou quebra de linha junto, o que torna o cabeçalho
+         inválido e faz o fetch nem chegar a sair.
+       Limpar aqui é mais barato que descobrir depois. */
+    token: (process.env.MELHORENVIO_TOKEN ?? '')
+      .trim()
+      .replace(/^Bearer\s+/i, '')
+      .replace(/\s+/g, ''),
     // O access_token vale 30 dias e o refresh 45. Sem estes dois, a renovação
     // não acontece e a emissão para de funcionar em um mês, sem aviso.
     clientId: process.env.MELHORENVIO_CLIENT_ID ?? '',
@@ -68,7 +79,8 @@ export const config = {
     refreshToken: process.env.MELHORENVIO_REFRESH_TOKEN ?? '',
     /* Cabeçalho obrigatório: a API recusa requisição sem nome da aplicação e
        e-mail de contato. */
-    userAgent: process.env.MELHORENVIO_USER_AGENT ?? '',
+    // Quebra de linha aqui também invalida o cabeçalho.
+    userAgent: (process.env.MELHORENVIO_USER_AGENT ?? '').replace(/\s+/g, ' ').trim(),
   },
 }
 
