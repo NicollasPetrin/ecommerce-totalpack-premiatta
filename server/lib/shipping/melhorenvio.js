@@ -85,6 +85,22 @@ async function call(caminho, opts = {}) {
   return corpo
 }
 
+/**
+ * Documento no campo certo.
+ *
+ * A API separa pessoa física de jurídica: `document` só aceita CPF e
+ * `company_document` só aceita CNPJ. Mandar CNPJ em `document` devolve 422
+ * dizendo que o campo "deve ter um CPF válido" — que soa como valor inválido,
+ * mas é campo trocado.
+ */
+function documentoDe(doc) {
+  const digitos = String(doc ?? '').replace(/\D/g, '')
+  if (digitos.length === 14) return { company_document: digitos }
+  if (digitos.length === 11) return { document: digitos }
+  // Nem um nem outro: manda vazio e deixa a API dizer o que falta.
+  return { document: digitos }
+}
+
 /** Converte um pedido nosso no formato de volume que a API espera. */
 function montarVolumes(itens) {
   return itens.map((i) => ({
@@ -143,7 +159,7 @@ export const melhorenvio = {
           name: remetente.nome,
           phone: remetente.telefone,
           email: remetente.email,
-          document: remetente.doc,
+          ...documentoDe(remetente.doc),
           address: remetente.rua,
           complement: remetente.complemento,
           number: remetente.numero,
@@ -156,7 +172,7 @@ export const melhorenvio = {
           name: destinatario.nome,
           phone: destinatario.telefone,
           email: destinatario.email,
-          document: destinatario.doc,
+          ...documentoDe(destinatario.doc),
           address: destinatario.rua,
           complement: destinatario.complemento,
           number: destinatario.numero,
