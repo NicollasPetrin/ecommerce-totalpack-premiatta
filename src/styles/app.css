@@ -2723,20 +2723,17 @@
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 0 6px;
-  font-size: var(--fs-caption);
-  color: var(--label-2);
+  gap: 0 7px;
   min-width: 0;
 }
 
-.freteopt__nome strong { color: var(--label); font-weight: 600; }
-
-.freteopt__nome em {
-  font-style: normal;
-  font-size: 11px;
-  color: var(--label-3);
-  white-space: nowrap;
+.freteopt__nome strong {
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  color: var(--label);
 }
+
+
 
 .freteopt__preco {
   font-size: var(--fs-footnote);
@@ -2759,3 +2756,41 @@
 }
 
 .freteopts__causa strong { font-family: var(--font); color: var(--label); }
+
+/* O prazo é o que a pessoa compara primeiro; o nome do serviço vira apoio. */
+.freteopt__transp {
+  font-size: 11px;
+  color: var(--label-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Selo de curadoria: responde "por que esta?" sem exigir comparação. */
+.freteopt__tag {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: var(--r-full);
+  white-space: nowrap;
+}
+
+.freteopt__tag.is-verde { background: var(--green-soft); color: var(--green); }
+.freteopt__tag.is-azul { background: var(--teal-soft); color: var(--teal); }
+
+.freteopts__mais {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 40px;
+  margin-top: 4px;
+  padding-inline: 2px;
+  font-size: var(--fs-footnote);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.freteopts__mais:hover { text-decoration: underline; }

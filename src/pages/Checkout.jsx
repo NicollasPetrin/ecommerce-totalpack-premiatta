@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
 import { PAYMENT_LABEL } from '../store/StoreContext'
@@ -119,6 +119,56 @@ export default function Checkout() {
   }
   const [errors, setErrors] = useState({})
   const [sending, setSending] = useState(false)
+  const [verTodas, setVerTodas] = useState(false)
+
+  /**
+   * Curadoria das opções de frete.
+   *
+   * A transportadora devolve doze serviços com nomes que só quem trabalha com
+   * logística distingue ("Jadlog .Package" e "Jadlog .Package Centralizado").
+   * Doze alternativas é decisão travada — pela Lei de Hick, o tempo de escolha
+   * cresce com o número de opções, e o público desta loja não tem repertório
+   * para comparar transportadora.
+   *
+   * Então destacamos as duas perguntas que a pessoa de fato se faz: qual é a
+   * mais barata e qual chega antes. O resto fica a um clique.
+   */
+  const { destaque, visiveis } = useMemo(() => {
+    const lista = Array.isArray(freteOpcoes) ? freteOpcoes : []
+    if (lista.length === 0) return { destaque: {}, visiveis: [] }
+
+    const barata = [...lista].sort((a, b) => a.preco - b.preco)[0]
+    // Empate de prazo decide pelo preço: chegar junto e custar menos é melhor.
+    const rapida = [...lista].sort(
+      (a, b) => a.prazoDias - b.prazoDias || a.preco - b.preco,
+    )[0]
+
+    const marcas = {}
+    marcas[barata.servicoId] = { rotulo: 'Mais barato', tom: 'verde' }
+    // Quando a mais barata também é a mais rápida, um selo só — dois na mesma
+    // linha diriam a mesma coisa duas vezes.
+    if (rapida.servicoId !== barata.servicoId) {
+      marcas[rapida.servicoId] = { rotulo: 'Chega antes', tom: 'azul' }
+    }
+
+    if (verTodas) return { destaque: marcas, visiveis: lista }
+
+    /* Com poucas opções não vale esconder nada: o clique a mais custaria
+       mais que a rolagem que ele evita. */
+    if (lista.length <= 3) return { destaque: marcas, visiveis: lista }
+
+    const escolhidos = [barata, rapida].filter(
+      (o, i, arr) => arr.findIndex((x) => x.servicoId === o.servicoId) === i,
+    )
+
+    // A opção já escolhida nunca some da lista, mesmo não sendo destaque —
+    // ver a própria escolha desaparecer é desnorteante.
+    if (freteEscolhido && !escolhidos.some((o) => o.servicoId === freteEscolhido.servicoId)) {
+      escolhidos.push(freteEscolhido)
+    }
+
+    return { destaque: marcas, visiveis: escolhidos }
+  }, [freteOpcoes, freteEscolhido, verTodas])
 
   const ship = shipping ?? 0
   const grand = subtotal + ship
@@ -352,32 +402,53 @@ export default function Checkout() {
                   !freteErro &&
                   Array.isArray(freteOpcoes) &&
                   freteOpcoes.length > 0 && (
-                    <ul className="freteopts__list" role="radiogroup" aria-label="Forma de envio">
-                      {freteOpcoes.map((o) => {
-                        const marcado = freteEscolhido?.servicoId === o.servicoId
-                        return (
-                          <li key={o.servicoId}>
-                            <button
-                              type="button"
-                              role="radio"
-                              aria-checked={marcado}
-                              className={`freteopt${marcado ? ' is-on' : ''}`}
-                              onClick={() => setFreteEscolhido(o)}
-                            >
-                              {/* Tudo numa linha só: empilhado, cada opção
-                                  ocupava 70px e a lista virava uma parede. */}
-                              <span className="freteopt__nome">
-                                <strong>{o.transportadora}</strong> {o.nome}
-                                <em>
-                                  {o.prazoDias === 1 ? '1 dia útil' : `${o.prazoDias} dias úteis`}
-                                </em>
-                              </span>
-                              <span className="freteopt__preco">{money(o.preco)}</span>
-                            </button>
-                          </li>
-                        )
-                      })}
-                    </ul>
+                    <>
+                      <ul className="freteopts__list" role="radiogroup" aria-label="Forma de envio">
+                        {visiveis.map((o) => {
+                          const marcado = freteEscolhido?.servicoId === o.servicoId
+                          return (
+                            <li key={o.servicoId}>
+                              <button
+                                type="button"
+                                role="radio"
+                                aria-checked={marcado}
+                                className={`freteopt${marcado ? ' is-on' : ''}`}
+                                onClick={() => setFreteEscolhido(o)}
+                              >
+                                <span className="freteopt__nome">
+                                  {destaque[o.servicoId] && (
+                                    <em className={`freteopt__tag is-${destaque[o.servicoId].tom}`}>
+                                      {destaque[o.servicoId].rotulo}
+                                    </em>
+                                  )}
+                                  <strong>
+                                    {o.prazoDias === 1 ? '1 dia útil' : `${o.prazoDias} dias úteis`}
+                                  </strong>
+                                  <span className="freteopt__transp">
+                                    {o.transportadora} {o.nome}
+                                  </span>
+                                </span>
+                                <span className="freteopt__preco">{money(o.preco)}</span>
+                              </button>
+                            </li>
+                          )
+                        })}
+                      </ul>
+
+                      {/* Divulgação progressiva: as duas escolhas que as pessoas
+                          realmente fazem ficam à vista; as outras dez, atrás de
+                          um clique de quem quiser comparar. */}
+                      {freteOpcoes.length > visiveis.length && (
+                        <button
+                          type="button"
+                          className="freteopts__mais"
+                          onClick={() => setVerTodas(true)}
+                        >
+                          Ver as outras {freteOpcoes.length - visiveis.length} opções
+                          <Icon name="chevronDown" size={15} />
+                        </button>
+                      )}
+                    </>
                   )}
               </div>
             )}
