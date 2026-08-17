@@ -437,7 +437,12 @@ export function StoreProvider({ children }) {
 
       return order
     },
-    [cartLines, clearCart, loadPublic, loadCustomerOrders, loadAdmin, currentCustomer, isAdmin],
+    // freteEscolhido entra aqui: sem ele a funcao congela com a escolha
+    // antiga e o pedido sai sem forma de envio, mesmo com a tela certa.
+    [
+      cartLines, freteEscolhido, clearCart, loadPublic, loadCustomerOrders,
+      loadAdmin, currentCustomer, isAdmin,
+    ],
   )
 
   const updateOrderStatus = useCallback(async (orderId, status) => {

@@ -2688,23 +2688,24 @@
    Opções de frete no checkout
    ========================================================================== */
 
-.freteopts { margin: 14px 0 4px; }
+.freteopts { margin: 12px 0 4px; }
 
 .freteopts__list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .freteopt {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
-  min-height: 56px;
-  padding: 11px 15px;
-  border-radius: var(--r-md);
+  /* 44px é o mínimo confortável para o dedo; abaixo disso o toque erra. */
+  min-height: 44px;
+  padding: 7px 12px;
+  border-radius: var(--r-sm);
   background: var(--bg-elevated);
   border: 1.5px solid var(--separator);
   text-align: left;
@@ -2720,9 +2721,10 @@
 
 .freteopt__nome {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: var(--fs-footnote);
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  font-size: var(--fs-caption);
   color: var(--label-2);
   min-width: 0;
 }
@@ -2731,12 +2733,13 @@
 
 .freteopt__nome em {
   font-style: normal;
-  font-size: var(--fs-caption);
+  font-size: 11px;
   color: var(--label-3);
+  white-space: nowrap;
 }
 
 .freteopt__preco {
-  font-size: var(--fs-callout);
+  font-size: var(--fs-footnote);
   font-weight: 700;
   white-space: nowrap;
 }

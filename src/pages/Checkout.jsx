@@ -364,12 +364,12 @@ export default function Checkout() {
                               className={`freteopt${marcado ? ' is-on' : ''}`}
                               onClick={() => setFreteEscolhido(o)}
                             >
+                              {/* Tudo numa linha só: empilhado, cada opção
+                                  ocupava 70px e a lista virava uma parede. */}
                               <span className="freteopt__nome">
                                 <strong>{o.transportadora}</strong> {o.nome}
                                 <em>
-                                  {o.prazoDias === 1
-                                    ? 'chega em 1 dia útil'
-                                    : `chega em ${o.prazoDias} dias úteis`}
+                                  {o.prazoDias === 1 ? '1 dia útil' : `${o.prazoDias} dias úteis`}
                                 </em>
                               </span>
                               <span className="freteopt__preco">{money(o.preco)}</span>
