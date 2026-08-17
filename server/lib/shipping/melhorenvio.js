@@ -1,4 +1,5 @@
 import { config } from '../../config.js'
+import { tokenDaTransportadora } from './credenciais.js'
 
 /**
  * Adaptador do Melhor Envio.
@@ -29,7 +30,9 @@ const STATUS = {
 }
 
 async function call(caminho, opts = {}) {
-  const { baseUrl, token, userAgent } = cfg()
+  const { baseUrl, userAgent } = cfg()
+  // O token vem do painel quando houver; senão, da variável de ambiente.
+  const token = await tokenDaTransportadora()
   const url = `${baseUrl}/api/v2${caminho}`
 
   let r

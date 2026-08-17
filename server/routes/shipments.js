@@ -7,6 +7,7 @@ import { limiteExterno } from '../lib/ratelimit.js'
 import { config } from '../config.js'
 import { currentShippingProvider } from '../lib/shipping/index.js'
 import { buyLabel, createShipment, quoteForCart, syncShipment } from '../lib/shipping/service.js'
+import { resumoDoToken } from '../lib/shipping/credenciais.js'
 import * as s from '../lib/serialize.js'
 
 export const shipmentRoutes = Router()
@@ -109,18 +110,17 @@ shipmentRoutes.post(
   wrap(async (req, res) => {
     const cfg = await one(`SELECT * FROM settings WHERE id = true`)
     const me = config.melhorEnvio
+    const tk = await resumoDoToken()
 
     const ambienteUrl = me.baseUrl.includes('sandbox') ? 'sandbox' : 'produção'
     const configuracao = {
       provedor: config.shippingProvider,
       endereco: me.baseUrl,
       ambienteDoEndereco: ambienteUrl,
-      tokenPresente: Boolean(me.token),
-      tokenTamanho: me.token.length,
-      /* Todo JWT começa com "eyJ" (é `{"` em base64), então isto não revela
-         nada secreto — mas separa o token de acesso do client_secret, que é
-         a confusão que já custou horas aqui. */
-      pareceToken: /^eyJ[\w-]+\.[\w-]+\./.test(me.token),
+      tokenPresente: tk.presente,
+      tokenTamanho: tk.tamanho,
+      pareceToken: tk.pareceToken,
+      origemDoToken: tk.origem,
       userAgent: me.userAgent || '(vazio — a API recusa sem isto)',
       renovacaoConfigurada: Boolean(me.clientId && me.refreshToken),
       remetenteCep: cfg.sender_cep || '(vazio)',
@@ -158,7 +158,7 @@ shipmentRoutes.post(
     } else if (!configuracao.pareceToken) {
       conclusao =
         `O valor em MELHORENVIO_TOKEN não tem formato de token de acesso ` +
-        `(${me.token.length} caracteres, e não começa com "eyJ"). O token do ` +
+        `(${tk.tamanho} caracteres, e não começa com "eyJ"). O token do ` +
         'Melhor Envio é um JWT longo. Pegue em GERENCIAR → TOKENS no painel ' +
         'deles — não confunda com o client_secret do aplicativo, que tem 40 ' +
         'caracteres.'

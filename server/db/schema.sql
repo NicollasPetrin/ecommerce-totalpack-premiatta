@@ -411,6 +411,18 @@ ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_district TEXT NOT NULL DEFA
 ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_city    TEXT NOT NULL DEFAULT '';
 ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_state   TEXT NOT NULL DEFAULT '';
 
+-- Token da transportadora no banco, não em variável de ambiente.
+--
+-- Motivo prático: no Railway, mudar uma variável exige um deploy, e deploy
+-- falha (o GitHub caiu no meio de um). Enquanto isso, a loja fica rodando com
+-- a credencial velha e nada que se ajuste no painel tem efeito.
+--
+-- Aqui o dono cola o token na tela e ele passa a valer na hora. Também resolve
+-- a troca a cada 30 dias, que é a validade do token deles.
+--
+-- Vazio = usa a variável de ambiente, para não quebrar quem já configurou lá.
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS melhorenvio_token TEXT NOT NULL DEFAULT '';
+
 -- -----------------------------------------------------------------------------
 -- Envios
 --

@@ -138,6 +138,29 @@ export default function AdminSettings() {
               transportadora não calcula o frete nem aceita a postagem.
             </p>
 
+            {/* O token fica aqui, e não em variável de ambiente, porque trocar
+                variável no Railway exige deploy — e deploy falha. Colado aqui,
+                vale na cotação seguinte. */}
+            <div className="field">
+              <label htmlFor="s-metoken">Chave da transportadora (Melhor Envio)</label>
+              <input
+                id="s-metoken"
+                className="input"
+                type="password"
+                value={f.melhorenvioToken ?? ''}
+                onChange={set('melhorenvioToken')}
+                placeholder="cole aqui o token que começa com eyJ…"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <span className="hint">
+                Pegue em GERENCIAR → TOKENS no painel do Melhor Envio. Não é o
+                <code> client_secret</code> da Área Dev, que tem 40 caracteres.
+                Por segurança o valor gravado nunca volta para esta tela: deixar
+                em branco mantém o que já está salvo.
+              </span>
+            </div>
+
             {/* Teste de conexão: dispara uma cotação de mentira e mostra o
                 retorno cru da transportadora, sem precisar ir ao checkout. */}
             <div className="testeconn">
@@ -180,7 +203,7 @@ export default function AdminSettings() {
                                 teste.configuracao.pareceToken
                                   ? 'formato de JWT (certo)'
                                   : 'NÃO parece um JWT'
-                              }`
+                              } · vindo do ${teste.configuracao.origemDoToken}`
                             : 'ausente'}
                         </dd>
                       </div>

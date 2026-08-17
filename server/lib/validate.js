@@ -282,6 +282,10 @@ export const schemas = {
       .toUpperCase()
       .refine((v) => v === '' || v.length === 2, 'UF deve ter 2 letras.')
       .default(''),
+
+    /* Token da transportadora. Fica aqui e nao no ambiente porque trocar
+       variavel no Railway exige deploy, e deploy pode falhar. */
+    melhorenvioToken: z.string().trim().max(4000).default(''),
   }),
 
   order: z

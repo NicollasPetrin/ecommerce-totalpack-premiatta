@@ -9,6 +9,7 @@ import { findOverlaps, findZone } from '../lib/zones.js'
 import { limiteLogin, limiteExterno } from '../lib/ratelimit.js'
 import { config } from '../config.js'
 import { itensComMedidas, quoteForCart } from '../lib/shipping/service.js'
+import { esquecerToken } from '../lib/shipping/credenciais.js'
 import * as s from '../lib/serialize.js'
 
 export const storeRoutes = Router()
@@ -36,16 +37,21 @@ storeRoutes.put(
          instagram=$7, pix_key=$8, free_shipping_from=$9, low_stock_threshold=$10,
          sender_name=$11, sender_doc=$12, sender_cep=$13, sender_street=$14,
          sender_number=$15, sender_compl=$16, sender_district=$17,
-         sender_city=$18, sender_state=$19
+         sender_city=$18, sender_state=$19,
+         /* Vazio não apaga o que já existe: a tela nunca recebe o token de
+            volta, então mandar vazio significa "não mexi nele". */
+         melhorenvio_token = CASE WHEN $20 = '' THEN melhorenvio_token ELSE $20 END
        WHERE id = true RETURNING *`,
       [
         d.storeName, d.tagline, d.email, d.phone, d.address, d.hours,
         d.instagram, d.pixKey, d.freeShippingFrom, d.lowStockThreshold,
         d.senderName, d.senderDoc, d.senderCep, d.senderStreet,
         d.senderNumber, d.senderCompl, d.senderDistrict,
-        d.senderCity, d.senderState,
+        d.senderCity, d.senderState, d.melhorenvioToken,
       ],
     )
+    // A troca do token tem que valer na próxima cotação, não daqui a 30s.
+    esquecerToken()
     res.json({ settings: s.settings(row) })
   }),
 )
