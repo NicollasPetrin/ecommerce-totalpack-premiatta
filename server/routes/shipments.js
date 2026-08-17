@@ -117,6 +117,10 @@ shipmentRoutes.post(
       ambienteDoEndereco: ambienteUrl,
       tokenPresente: Boolean(me.token),
       tokenTamanho: me.token.length,
+      /* Todo JWT começa com "eyJ" (é `{"` em base64), então isto não revela
+         nada secreto — mas separa o token de acesso do client_secret, que é
+         a confusão que já custou horas aqui. */
+      pareceToken: /^eyJ[\w-]+\.[\w-]+\./.test(me.token),
       userAgent: me.userAgent || '(vazio — a API recusa sem isto)',
       renovacaoConfigurada: Boolean(me.clientId && me.refreshToken),
       remetenteCep: cfg.sender_cep || '(vazio)',
@@ -151,10 +155,18 @@ shipmentRoutes.post(
     let conclusao
     if (r.options?.length) {
       conclusao = `Conexão certa. ${r.options.length} serviço(s) responderam para ${origem} → 01310-100.`
+    } else if (!configuracao.pareceToken) {
+      conclusao =
+        `O valor em MELHORENVIO_TOKEN não tem formato de token de acesso ` +
+        `(${me.token.length} caracteres, e não começa com "eyJ"). O token do ` +
+        'Melhor Envio é um JWT longo. Pegue em GERENCIAR → TOKENS no painel ' +
+        'deles — não confunda com o client_secret do aplicativo, que tem 40 ' +
+        'caracteres.'
     } else if (/unauthenticated|unauthorized|401/i.test(r.causa ?? '')) {
       conclusao =
-        'O token foi recusado. Confira se ele é do mesmo ambiente do endereço ' +
-        `(${ambienteUrl}) e se não venceu — ele vale 30 dias.`
+        'O token tem o formato certo mas foi recusado. Confira se ele é do ' +
+        `mesmo ambiente do endereço (${ambienteUrl}), se não venceu (vale 30 ` +
+        'dias) e se as permissões de cotação foram marcadas ao gerá-lo.'
     } else if (/403|scope|permiss/i.test(r.causa ?? '')) {
       conclusao =
         'O token existe mas não tem permissão para cotar. Na aplicação do Melhor ' +

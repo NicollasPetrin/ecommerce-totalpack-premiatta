@@ -176,7 +176,11 @@ export default function AdminSettings() {
                         <dt>Token</dt>
                         <dd>
                           {teste.configuracao.tokenPresente
-                            ? `presente (${teste.configuracao.tokenTamanho} caracteres)`
+                            ? `${teste.configuracao.tokenTamanho} caracteres · ${
+                                teste.configuracao.pareceToken
+                                  ? 'formato de JWT (certo)'
+                                  : 'NÃO parece um JWT'
+                              }`
                             : 'ausente'}
                         </dd>
                       </div>
