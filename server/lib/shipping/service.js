@@ -102,6 +102,142 @@ export async function itensComMedidas(linhas) {
  */
 
 /**
+ * Compra a etiqueta de um pedido sem intervenção.
+ *
+ * Chamado quando o pagamento é confirmado. Nunca lança: a confirmação do
+ * pagamento não pode falhar por causa da etiqueta — o dinheiro já entrou, e o
+ * pedido tem que ficar pago mesmo que a transportadora esteja fora do ar. O
+ * que der errado fica gravado em `shipments.error`, visível no painel, e o
+ * dono termina pelo botão.
+ *
+ * Idempotente pelo estado: pedido que já tem envio ativo não gera outro. Isso
+ * importa porque a processadora reenvia o webhook quando não recebe 200 — sem
+ * a checagem, um reenvio compraria a segunda etiqueta e cobraria de novo.
+ */
+export async function autoBuyLabel(orderId) {
+  const cfg = await one(`SELECT * FROM settings WHERE id = true`)
+  if (!cfg?.auto_label) return { feito: false, motivo: 'automação desligada' }
+  if (config.shippingProvider === 'manual') {
+    return { feito: false, motivo: 'sem transportadora integrada' }
+  }
+
+  const jaTem = await one(
+    `SELECT id FROM shipments
+      WHERE order_id = $1 AND status NOT IN ('cancelado', 'erro')
+      LIMIT 1`,
+    [orderId],
+  )
+  if (jaTem) return { feito: false, motivo: 'pedido já tem etiqueta' }
+
+  const pedido = await one(`SELECT * FROM orders WHERE id = $1`, [orderId])
+  if (!pedido) return { feito: false, motivo: 'pedido não encontrado' }
+
+  /** Registra a falha para aparecer no painel em vez de sumir no log. */
+  const anotarFalha = async (mensagem) => {
+    console.error(`[etiqueta] pedido ${pedido.seq}: ${mensagem}`)
+    await one(
+      `INSERT INTO shipments (order_id, provider, status, error)
+       VALUES ($1, $2, 'erro', $3) RETURNING id`,
+      [orderId, config.shippingProvider, mensagem],
+    ).catch(() => {})
+    return { feito: false, motivo: mensagem }
+  }
+
+  try {
+    const itens = await many(
+      `SELECT i.name, i.qty, i.price, i.product_id,
+              p.weight_g, p.length_cm, p.width_cm, p.height_cm
+         FROM order_items i
+         LEFT JOIN products p ON p.id = i.product_id
+        WHERE i.order_id = $1`,
+      [orderId],
+    )
+
+    const semMedida = itens.filter(
+      (i) => !i.weight_g || !i.length_cm || !i.width_cm || !i.height_cm,
+    )
+    if (semMedida.length) {
+      return anotarFalha(
+        `sem peso ou medidas: ${[...new Set(semMedida.map((i) => i.name))].join(', ')}`,
+      )
+    }
+
+    const paraEnvio = itens.map((i) => ({
+      id: i.product_id,
+      name: i.name,
+      qty: i.qty,
+      price: Number(i.price),
+      weightG: Number(i.weight_g),
+      lengthCm: Number(i.length_cm),
+      widthCm: Number(i.width_cm),
+      heightCm: Number(i.height_cm),
+    }))
+
+    /* Recotamos em vez de reaproveitar o preço do pedido: a transportadora
+       exige um carrinho novo, e o id do serviço só vale dentro de uma cotação. */
+    const { options, erro } = await quoteForCart({ cep: pedido.cep, itens: paraEnvio })
+    if (erro || !options.length) return anotarFalha(erro ?? 'nenhum serviço disponível')
+
+    /* O serviço que o cliente escolheu. Se ele sumiu da lista, cai no mais
+       barato — deixar sem etiqueta seria pior, e a diferença de preço fica
+       visível no painel. */
+    const escolhido =
+      options.find((o) => o.servicoId === pedido.shipping_service_id) ??
+      [...options].sort((a, b) => a.preco - b.preco)[0]
+
+    const remetente = {
+      nome: cfg.sender_name || cfg.store_name,
+      doc: cfg.sender_doc,
+      telefone: cfg.phone,
+      email: cfg.email,
+      cep: cfg.sender_cep,
+      rua: cfg.sender_street,
+      numero: cfg.sender_number,
+      complemento: cfg.sender_compl,
+      bairro: cfg.sender_district,
+      cidade: cfg.sender_city,
+      uf: cfg.sender_state,
+    }
+
+    if (!remetente.cep || !remetente.doc) {
+      return anotarFalha('endereço da loja incompleto em Configurações')
+    }
+
+    const envio = await createShipment({
+      providerId: config.shippingProvider,
+      order: {
+        id: pedido.id,
+        codigo: `#${String(pedido.seq).padStart(4, '0')}`,
+        total: Number(pedido.total),
+        destinatario: {
+          nome: pedido.customer_name,
+          telefone: pedido.customer_phone,
+          email: pedido.customer_email,
+          doc: pedido.customer_doc,
+          cep: pedido.cep,
+          rua: pedido.street,
+          numero: pedido.number,
+          complemento: pedido.complement,
+          bairro: pedido.district,
+          cidade: pedido.city,
+          uf: pedido.state,
+        },
+      },
+      remetente,
+      itens: paraEnvio,
+      servicoId: escolhido.servicoId,
+    })
+
+    const pronto = await buyLabel({ providerId: config.shippingProvider, shipmentId: envio.id })
+    console.log(`[etiqueta] pedido ${pedido.seq}: gerada (${pronto.tracking || 'sem rastreio ainda'})`)
+    return { feito: true, shipmentId: pronto.id, tracking: pronto.tracking }
+  } catch (err) {
+    // Saldo insuficiente cai aqui, e é o caso mais provável na prática.
+    return anotarFalha(err.message)
+  }
+}
+
+/**
  * Traz o estado real de uma etiqueta da transportadora e grava.
  *
  * Chamado pelo webhook e pelo botão de conferir no painel. O corpo da

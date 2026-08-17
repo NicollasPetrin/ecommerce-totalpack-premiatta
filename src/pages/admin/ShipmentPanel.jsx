@@ -35,14 +35,16 @@ const STATUS_TOM = {
 
 export default function ShipmentPanel({ order, toast }) {
   const [envios, setEnvios] = useState([])
-  const [provider, setProvider] = useState('manual')
+  // null enquanto não carregou: sem isto, uma falha na busca mostrava
+  // "nenhuma transportadora integrada", que é uma afirmação falsa.
+  const [provider, setProvider] = useState(null)
   const [servicos, setServicos] = useState(null)
   const [carregando, setCarregando] = useState('')
   const [erro, setErro] = useState('')
 
   const carregar = useCallback(async () => {
     try {
-      const r = await api.get(`/api/orders/${order.id}/shipments`)
+      const r = await api.get(`/orders/${order.id}/shipments`)
       setEnvios(r.shipments ?? [])
       setProvider(r.provider ?? 'manual')
     } catch (e) {
@@ -70,31 +72,42 @@ export default function ShipmentPanel({ order, toast }) {
 
   const cotar = () =>
     acao('cotar', async () => {
-      const r = await api.post(`/api/orders/${order.id}/shipments/quote`)
+      const r = await api.post(`/orders/${order.id}/shipments/quote`)
       setServicos(r.servicos ?? [])
       if (!r.servicos?.length) toast?.('Nenhum serviço disponível para este CEP.', 'err')
     })
 
   const escolher = (servicoId) =>
     acao('escolher', async () => {
-      await api.post(`/api/orders/${order.id}/shipments`, { servicoId })
+      await api.post(`/orders/${order.id}/shipments`, { servicoId })
       setServicos(null)
       toast?.('Envio criado. Agora compre a etiqueta.')
     })
 
   const comprar = (id) =>
     acao('comprar', async () => {
-      await api.post(`/api/shipments/${id}/buy`)
+      await api.post(`/shipments/${id}/buy`)
       toast?.('Etiqueta comprada e gerada.')
     })
 
-  const conferir = (id) => acao('conferir', () => api.post(`/api/shipments/${id}/sync`))
+  const conferir = (id) => acao('conferir', () => api.post(`/shipments/${id}/sync`))
 
   const cancelar = (id) =>
     acao('cancelar', async () => {
-      await api.post(`/api/shipments/${id}/cancel`)
+      await api.post(`/shipments/${id}/cancel`)
       toast?.('Envio cancelado.')
     })
+
+  if (provider === null) {
+    return (
+      <section className="ship">
+        <h3 className="odetail__title">Envio</h3>
+        <p className="hint">
+          {erro ? `Não foi possível carregar: ${erro}` : 'Carregando…'}
+        </p>
+      </section>
+    )
+  }
 
   if (provider === 'manual') {
     return (

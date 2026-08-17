@@ -286,6 +286,7 @@ export const schemas = {
     /* Token da transportadora. Fica aqui e nao no ambiente porque trocar
        variavel no Railway exige deploy, e deploy pode falhar. */
     melhorenvioToken: z.string().trim().max(4000).default(''),
+    autoLabel: z.boolean().default(true),
   }),
 
   order: z

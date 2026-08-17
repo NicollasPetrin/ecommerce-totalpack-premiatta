@@ -423,6 +423,19 @@ ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_state   TEXT NOT NULL DEFAU
 -- Vazio = usa a variável de ambiente, para não quebrar quem já configurou lá.
 ALTER TABLE settings ADD COLUMN IF NOT EXISTS melhorenvio_token TEXT NOT NULL DEFAULT '';
 
+-- Comprar a etiqueta sozinho assim que o pagamento é confirmado.
+--
+-- Fica desligável porque a compra gasta saldo real da carteira: quem preferir
+-- conferir cada pedido antes de despachar consegue voltar ao fluxo manual.
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS auto_label BOOLEAN NOT NULL DEFAULT true;
+
+-- Qual serviço o cliente escolheu no checkout.
+--
+-- `delivery_zone` guarda o nome para leitura ("Correios SEDEX"); a compra da
+-- etiqueta precisa do id, e nome não serve para reencontrar o serviço na
+-- cotação seguinte.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_service_id TEXT NOT NULL DEFAULT '';
+
 -- -----------------------------------------------------------------------------
 -- Envios
 --

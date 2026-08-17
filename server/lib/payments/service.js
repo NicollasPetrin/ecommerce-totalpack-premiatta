@@ -1,6 +1,7 @@
 import { one, transaction } from '../../db/pool.js'
 import { getProvider } from './index.js'
 import { restoreStock } from '../stock.js'
+import { autoBuyLabel } from '../shipping/service.js'
 import { config } from '../../config.js'
 
 /**
@@ -140,6 +141,17 @@ export async function applyPaymentEvent({ provider, providerRef, status, paidAt,
       if (cancelados.length) await restoreStock(client, payment.order_id)
     }
 
-    return { applied: true, payment }
+    return { applied: true, payment, virouPago: status === 'pago' }
   })
+    .then(async (resultado) => {
+      /* A etiqueta é comprada fora da transação, e de propósito: falar com a
+         transportadora dentro dela seguraria as linhas do pedido travadas
+         durante uma chamada de rede. E se a compra falhar, o pagamento
+         continua confirmado — o dinheiro já entrou. */
+      if (resultado.applied && resultado.virouPago) {
+        const r = await autoBuyLabel(resultado.payment.order_id)
+        return { ...resultado, etiqueta: r }
+      }
+      return resultado
+    })
 }

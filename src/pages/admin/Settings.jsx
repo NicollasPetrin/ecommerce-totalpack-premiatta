@@ -161,6 +161,20 @@ export default function AdminSettings() {
               </span>
             </div>
 
+            <label className="switchrow">
+              <input
+                type="checkbox"
+                checked={f.autoLabel !== false}
+                onChange={set('autoLabel')}
+              />
+              <span>
+                <strong>Comprar a etiqueta automaticamente</strong>
+                Assim que o pagamento é confirmado, a loja compra a etiqueta do
+                serviço que o cliente escolheu e debita da sua carteira no Melhor
+                Envio. Desligue se preferir conferir cada pedido antes de despachar.
+              </span>
+            </label>
+
             {/* Teste de conexão: dispara uma cotação de mentira e mostra o
                 retorno cru da transportadora, sem precisar ir ao checkout. */}
             <div className="testeconn">

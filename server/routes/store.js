@@ -40,14 +40,15 @@ storeRoutes.put(
          sender_city=$18, sender_state=$19,
          /* Vazio não apaga o que já existe: a tela nunca recebe o token de
             volta, então mandar vazio significa "não mexi nele". */
-         melhorenvio_token = CASE WHEN $20 = '' THEN melhorenvio_token ELSE $20 END
+         melhorenvio_token = CASE WHEN $20 = '' THEN melhorenvio_token ELSE $20 END,
+         auto_label = $21
        WHERE id = true RETURNING *`,
       [
         d.storeName, d.tagline, d.email, d.phone, d.address, d.hours,
         d.instagram, d.pixKey, d.freeShippingFrom, d.lowStockThreshold,
         d.senderName, d.senderDoc, d.senderCep, d.senderStreet,
         d.senderNumber, d.senderCompl, d.senderDistrict,
-        d.senderCity, d.senderState, d.melhorenvioToken,
+        d.senderCity, d.senderState, d.melhorenvioToken, d.autoLabel,
       ],
     )
     // A troca do token tem que valer na próxima cotação, não daqui a 30s.

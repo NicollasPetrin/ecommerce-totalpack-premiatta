@@ -1252,3 +1252,29 @@
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
+
+/* Interruptor com explicação — decisão que mexe em dinheiro merece contexto */
+.switchrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 15px;
+  margin: 12px 0;
+  border-radius: var(--r-sm);
+  background: var(--bg-grouped);
+  border: 1px solid var(--separator);
+  cursor: pointer;
+}
+
+.switchrow input { margin-top: 3px; flex: none; width: 17px; height: 17px; }
+
+.switchrow span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: var(--fs-caption);
+  color: var(--label-2);
+  line-height: 1.5;
+}
+
+.switchrow strong { font-size: var(--fs-footnote); color: var(--label); }

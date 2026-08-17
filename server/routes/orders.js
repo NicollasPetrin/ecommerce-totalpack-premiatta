@@ -205,8 +205,8 @@ orderRoutes.post(
            customer_id, customer_name, customer_email, customer_phone, customer_doc,
            delivery, delivery_zone, delivery_days,
            cep, street, number, complement, district, city, state,
-           payment, note, subtotal, shipping, total)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+           payment, note, subtotal, shipping, total, shipping_service_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
          RETURNING *`,
         [
           customerId, d.name, d.email, d.phone, d.cpfCnpj,
@@ -214,6 +214,8 @@ orderRoutes.post(
           normalizeCep(d.cep), d.street, d.number, d.complement,
           d.district, d.city, d.state,
           d.payment, d.note, subtotal, shipping, total,
+          // Guardado para a etiqueta reencontrar o mesmo serviço depois.
+          freteCotado?.servicoId ?? '',
         ],
       )
       const orderRow = created[0]
