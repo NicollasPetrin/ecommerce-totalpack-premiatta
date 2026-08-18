@@ -509,3 +509,45 @@ BEGIN
        FOR EACH ROW EXECUTE FUNCTION touch_updated_at()', t, t);
   END LOOP;
 END $$;
+
+-- -----------------------------------------------------------------------------
+-- E-mail
+--
+-- A chave fica no banco pelo mesmo motivo da transportadora: trocar variável de
+-- ambiente exige deploy, e deploy falha. Vazio = usa a variável de ambiente.
+-- -----------------------------------------------------------------------------
+
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS email_key TEXT NOT NULL DEFAULT '';
+
+-- Para onde vai o aviso de venda nova. Vazio = usa o e-mail de contato da loja.
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS notify_email TEXT NOT NULL DEFAULT '';
+
+-- Avisar o cliente por e-mail em cada etapa. Desligável para quem preferir
+-- falar por outro canal.
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS notify_customer BOOLEAN NOT NULL DEFAULT true;
+
+-- Registro do que já foi enviado.
+--
+-- Existe para não mandar o mesmo aviso duas vezes: o webhook da processadora
+-- reenvia eventos, e receber "seu pedido foi enviado" três vezes é ruído que
+-- corrói a confiança de quem comprou.
+CREATE TABLE IF NOT EXISTS email_log (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id   UUID REFERENCES orders(id) ON DELETE CASCADE,
+  tipo       TEXT NOT NULL,
+  destino    TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'enviado',
+  erro       TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Um aviso de cada tipo por pedido. É a trava contra o reenvio.
+--
+-- Cobre 'enviando' também, e não só 'enviado': a reserva precisa colidir no
+-- INSERT, antes de a mensagem sair. Cobrindo só o estado final, a segunda
+-- tentativa inseria, mandava o e-mail e só então falhava — tarde demais.
+-- 'falhou' fica de fora para uma tentativa futura ser possível.
+DROP INDEX IF EXISTS email_log_unico;
+CREATE UNIQUE INDEX IF NOT EXISTS email_log_unico
+  ON email_log (order_id, tipo)
+  WHERE order_id IS NOT NULL AND status <> 'falhou';

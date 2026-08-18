@@ -129,6 +129,61 @@ export default function AdminSettings() {
 
             <hr className="rule" />
 
+            <h3 className="apage__sub">Avisos por e-mail</h3>
+            <p className="hint">
+              A loja avisa você a cada venda, e o cliente a cada etapa — incluindo
+              o código de rastreio quando a etiqueta sai.
+            </p>
+
+            <div className="field">
+              <label htmlFor="s-emailkey">Chave do provedor de e-mail</label>
+              <input
+                id="s-emailkey"
+                className="input"
+                type="password"
+                value={f.emailKey ?? ''}
+                onChange={set('emailKey')}
+                placeholder="cole aqui a chave que começa com re_…"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <span className="hint">
+                Como a da transportadora, o valor gravado nunca volta para esta
+                tela: deixar em branco mantém o que já está salvo.
+              </span>
+            </div>
+
+            <div className="field">
+              <label htmlFor="s-notify">Receber aviso de venda em</label>
+              <input
+                id="s-notify"
+                className="input"
+                type="email"
+                value={f.notifyEmail ?? ''}
+                onChange={set('notifyEmail')}
+                placeholder={f.email}
+              />
+              <span className="hint">
+                Em branco usa o e-mail de contato da loja ({f.email || '—'}).
+              </span>
+            </div>
+
+            <label className="switchrow">
+              <input
+                type="checkbox"
+                checked={f.notifyCustomer !== false}
+                onChange={set('notifyCustomer')}
+              />
+              <span>
+                <strong>Avisar o cliente por e-mail</strong>
+                Confirmação do pedido, aviso de pagamento e o código de rastreio
+                quando a encomenda sair. Desligue se preferir falar por outro canal
+                — o aviso de venda para você continua vindo.
+              </span>
+            </label>
+
+            <hr className="rule" />
+
             {/* Remetente da etiqueta — separado do endereço acima de propósito:
                 aquele é texto livre para mostrar no rodapé, este vai para a
                 transportadora e precisa de cada parte no seu campo. */}

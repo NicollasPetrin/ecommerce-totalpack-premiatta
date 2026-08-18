@@ -10,6 +10,7 @@ import { limiteLogin, limiteExterno } from '../lib/ratelimit.js'
 import { config } from '../config.js'
 import { itensComMedidas, quoteForCart } from '../lib/shipping/service.js'
 import { esquecerToken } from '../lib/shipping/credenciais.js'
+import { esquecerChaveEmail } from '../lib/email/service.js'
 import * as s from '../lib/serialize.js'
 
 export const storeRoutes = Router()
@@ -41,7 +42,11 @@ storeRoutes.put(
          /* Vazio não apaga o que já existe: a tela nunca recebe o token de
             volta, então mandar vazio significa "não mexi nele". */
          melhorenvio_token = CASE WHEN $20 = '' THEN melhorenvio_token ELSE $20 END,
-         auto_label = $21
+         auto_label = $21,
+         notify_email = $22,
+         notify_customer = $23,
+         /* Mesma regra do token da transportadora: vazio = nao mexi. */
+         email_key = CASE WHEN $24 = '' THEN email_key ELSE $24 END
        WHERE id = true RETURNING *`,
       [
         d.storeName, d.tagline, d.email, d.phone, d.address, d.hours,
@@ -49,10 +54,12 @@ storeRoutes.put(
         d.senderName, d.senderDoc, d.senderCep, d.senderStreet,
         d.senderNumber, d.senderCompl, d.senderDistrict,
         d.senderCity, d.senderState, d.melhorenvioToken, d.autoLabel,
+        d.notifyEmail, d.notifyCustomer, d.emailKey,
       ],
     )
     // A troca do token tem que valer na próxima cotação, não daqui a 30s.
     esquecerToken()
+    esquecerChaveEmail()
     res.json({ settings: s.settings(row) })
   }),
 )

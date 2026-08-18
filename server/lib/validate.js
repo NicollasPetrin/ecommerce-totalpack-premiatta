@@ -287,6 +287,9 @@ export const schemas = {
        variavel no Railway exige deploy, e deploy pode falhar. */
     melhorenvioToken: z.string().trim().max(4000).default(''),
     autoLabel: z.boolean().default(true),
+    emailKey: z.string().trim().max(400).default(''),
+    notifyEmail: z.string().trim().max(160).default(''),
+    notifyCustomer: z.boolean().default(true),
   }),
 
   order: z

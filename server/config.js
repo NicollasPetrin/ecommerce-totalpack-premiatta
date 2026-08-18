@@ -56,6 +56,17 @@ export const config = {
      emitir a etiqueta, que é mais previsível para quem compra. */
   shippingProvider: process.env.SHIPPING_PROVIDER ?? 'manual',
 
+  /* ---- E-mail ----
+     'nenhum' = a loja nao envia aviso nenhum (comportamento antigo). */
+  emailProvider: process.env.EMAIL_PROVIDER ?? 'nenhum',
+  emailKey: (process.env.EMAIL_KEY ?? '').trim().replace(/^Bearer\s+/i, ''),
+  /** Precisa ser de dominio verificado no provedor, senao cai em spam. */
+  emailFrom: process.env.EMAIL_FROM ?? 'TotalPack <contato@totalpack.app.br>',
+  /** Configurável só para o teste conseguir apontar para um servidor falso. */
+  emailBaseUrl: (process.env.EMAIL_BASE_URL ?? 'https://api.resend.com')
+    .trim()
+    .replace(/\/+$/, ''),
+
   melhorEnvio: {
     baseUrl: (
       process.env.MELHORENVIO_BASE_URL ?? 'https://sandbox.melhorenvio.com.br'

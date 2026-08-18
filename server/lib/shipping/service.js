@@ -1,6 +1,7 @@
 import { many, one, transaction } from '../../db/pool.js'
 import { config } from '../../config.js'
 import { getShippingProvider } from './index.js'
+import { avisarPedidoEnviado } from '../email/service.js'
 
 /**
  * Cotação para a loja: quanto o cliente vai pagar de frete.
@@ -100,6 +101,35 @@ export async function itensComMedidas(linhas) {
  * passo do checkout, então tudo aqui é escrito de forma que uma falha no meio
  * seja retomada — nunca refeita do zero.
  */
+
+/**
+ * Etiqueta pronta: o pedido passa a "enviado" e o cliente recebe o rastreio.
+ *
+ * A trava contra repetição é a própria transição de status: o UPDATE só casa
+ * enquanto o pedido está em 'pendente' ou 'pago', então a segunda chamada não
+ * altera linha nenhuma e não dispara e-mail. Um pedido já marcado como
+ * entregue também não volta para enviado por causa de um evento atrasado.
+ *
+ * Não lança: aviso ao cliente não pode derrubar a compra da etiqueta que
+ * acabou de dar certo.
+ */
+async function marcarEnviado(orderId, envio) {
+  try {
+    const mudou = await one(
+      `UPDATE orders SET status = 'enviado'
+        WHERE id = $1 AND status IN ('pendente', 'pago')
+        RETURNING id`,
+      [orderId],
+    )
+    if (!mudou) return { marcado: false, motivo: 'pedido já saiu de pago' }
+
+    await avisarPedidoEnviado(orderId, envio ?? {})
+    return { marcado: true }
+  } catch (err) {
+    console.error('[envio] falha ao marcar como enviado:', err.message)
+    return { marcado: false, motivo: err.message }
+  }
+}
 
 /**
  * Compra a etiqueta de um pedido sem intervenção.
@@ -279,6 +309,12 @@ export async function syncShipment(providerId, externalId) {
     ],
   )
 
+  /* O rastreio costuma aparecer só depois, quando a transportadora informa.
+     Por isso marcamos aqui também — a trava de status impede o aviso duplo. */
+  if (['gerada', 'postado', 'entregue'].includes(atual.status)) {
+    await marcarEnviado(registro.order_id, atual)
+  }
+
   return { updated: true, status: atual.status, tracking: atual.tracking }
 }
 
@@ -318,6 +354,11 @@ export async function buyLabel({ providerId, shipmentId }) {
 
     const url = await provider.imprimir({ externalId })
     const atualizado = await marcar('gerada', { labelUrl: url })
+
+    /* Etiqueta na mão significa que a encomenda vai sair: o pedido vira
+       'enviado' e o cliente recebe o rastreio, sem ninguém lembrar de fazer. */
+    await marcarEnviado(registro.order_id, atualizado)
+
     return atualizado
   } catch (err) {
     await marcar(registro.status, { error: err.message }).catch(() => {})

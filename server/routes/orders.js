@@ -8,6 +8,7 @@ import { config } from '../config.js'
 import { itensComMedidas, quoteForCart } from '../lib/shipping/service.js'
 import { createCharge, latestPayment, syncCharge } from '../lib/payments/service.js'
 import { restoreStock } from '../lib/stock.js'
+import { avisarPedidoCriado } from '../lib/email/service.js'
 import { limitePedido, limiteExterno } from '../lib/ratelimit.js'
 import * as s from '../lib/serialize.js'
 
@@ -294,6 +295,12 @@ orderRoutes.post(
     const payment = await createCharge({ order, customer: d })
 
     res.status(201).json({ order: { ...order, charge: s.payment(payment) } })
+
+    /* Avisos depois de responder: o cliente não deve esperar o servidor de
+       e-mail para ver a confirmação na tela. Falha aqui não afeta o pedido. */
+    avisarPedidoCriado(order.id).catch((e) =>
+      console.error('[email] aviso de pedido novo falhou:', e.message),
+    )
   }),
 )
 
