@@ -62,10 +62,9 @@ export const config = {
   emailKey: (process.env.EMAIL_KEY ?? '').trim().replace(/^Bearer\s+/i, ''),
   /** Precisa ser de dominio verificado no provedor, senao cai em spam. */
   emailFrom: process.env.EMAIL_FROM ?? 'TotalPack <contato@totalpack.app.br>',
-  /** Configurável só para o teste conseguir apontar para um servidor falso. */
-  emailBaseUrl: (process.env.EMAIL_BASE_URL ?? 'https://api.resend.com')
-    .trim()
-    .replace(/\/+$/, ''),
+  /* Vazio = cada adaptador usa o endereço do próprio fornecedor. Só existe
+     para o teste conseguir apontar tudo para um servidor falso. */
+  emailBaseUrl: (process.env.EMAIL_BASE_URL ?? '').trim().replace(/\/+$/, ''),
 
   melhorEnvio: {
     baseUrl: (

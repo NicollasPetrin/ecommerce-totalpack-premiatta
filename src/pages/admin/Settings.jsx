@@ -143,13 +143,14 @@ export default function AdminSettings() {
                 type="password"
                 value={f.emailKey ?? ''}
                 onChange={set('emailKey')}
-                placeholder="cole aqui a chave que começa com re_…"
+                placeholder="cole a chave do Brevo (xkeysib-…) ou do Resend (re_…)"
                 autoComplete="off"
                 spellCheck={false}
               />
               <span className="hint">
-                Como a da transportadora, o valor gravado nunca volta para esta
-                tela: deixar em branco mantém o que já está salvo.
+                O fornecedor é reconhecido pelo formato da chave — não há nada
+                mais a escolher. Como a da transportadora, o valor gravado nunca
+                volta para esta tela: deixar em branco mantém o que já está salvo.
               </span>
             </div>
 

@@ -8,11 +8,14 @@
 
 import { config } from '../../config.js'
 
-const base = () => config.emailBaseUrl
+const PADRAO = 'https://api.resend.com'
+const base = () => config.emailBaseUrl || PADRAO
 
 export const resend = {
   id: 'resend',
   label: 'Resend',
+  // Serve para escolher o adaptador certo pela chave colada.
+  prefixo: /^re_/,
 
   async enviar({ chave, de, para, assunto, html, responderPara }) {
     let r

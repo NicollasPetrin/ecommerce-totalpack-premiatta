@@ -1,6 +1,6 @@
 import { many, one } from '../../db/pool.js'
 import { config } from '../../config.js'
-import { getEmailProvider } from './index.js'
+import { detectarProvedor, getEmailProvider } from './index.js'
 import { modelos } from './modelos.js'
 
 /**
@@ -59,13 +59,15 @@ export function esquecerChaveEmail() {
  * deploy falha justamente no dia em que a loja precisa dele. Quem quiser
  * desligar sem apagar a chave tem o botão nas configurações.
  *
- * EMAIL_PROVIDER continua valendo quando alguém o define de propósito, para o
- * dia em que houver um segundo fornecedor.
+ * Qual dos fornecedores sai do prefixo da própria chave, para não haver uma
+ * lista a escolher: escolher um e colar a chave do outro dá 401 sem explicar.
+ *
+ * EMAIL_PROVIDER continua valendo quando alguém o define de propósito.
  */
-function provedorAtual() {
+function provedorAtual(chave) {
   const doAmbiente = config.emailProvider
   if (doAmbiente && doAmbiente !== 'nenhum') return doAmbiente
-  return 'resend'
+  return detectarProvedor(chave)
 }
 
 /** O que a tela pode mostrar sem expor o segredo. */
@@ -73,13 +75,13 @@ export async function resumoDoEmail() {
   const chave = await chaveAtual()
   const row = await one(`SELECT email_key FROM settings WHERE id = true`).catch(() => null)
   return {
-    provedor: chave ? provedorAtual() : 'nenhum',
+    provedor: provedorAtual(chave),
     remetente: config.emailFrom,
     presente: Boolean(chave),
     tamanho: chave.length,
-    // As chaves do Resend começam com "re_"; isto não revela nada e evita
-    // colar o valor errado.
-    pareceChave: /^re_/.test(chave),
+    // Confere se a chave tem cara de algum fornecedor conhecido. Não revela
+    // nada e evita o erro mais comum: colar o valor errado do painel.
+    pareceChave: Boolean(chave) && detectarProvedor(chave) !== 'nenhum',
     origem: limparChave(row?.email_key) ? 'painel' : 'variável de ambiente',
   }
 }
@@ -135,7 +137,7 @@ async function enviarUmaVez({ tipo, orderId, destino, assunto, html, responderPa
   const chave = await chaveAtual()
   if (!chave) return { enviado: false, motivo: 'sem chave de e-mail' }
 
-  const provider = getEmailProvider(provedorAtual())
+  const provider = getEmailProvider(provedorAtual(chave))
   if (provider.id === 'nenhum') return { enviado: false, motivo: 'e-mail não configurado' }
 
   let reserva
