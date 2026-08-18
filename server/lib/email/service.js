@@ -50,12 +50,30 @@ export function esquecerChaveEmail() {
   cache = { valor: null, lidoEm: 0 }
 }
 
+/**
+ * Qual provedor usar.
+ *
+ * A chave é o interruptor. Exigir também uma variável de ambiente recriaria a
+ * armadilha que já nos pegou na transportadora: colar a chave no painel não
+ * ligaria nada, porque a variável só passa a valer depois de um deploy — e
+ * deploy falha justamente no dia em que a loja precisa dele. Quem quiser
+ * desligar sem apagar a chave tem o botão nas configurações.
+ *
+ * EMAIL_PROVIDER continua valendo quando alguém o define de propósito, para o
+ * dia em que houver um segundo fornecedor.
+ */
+function provedorAtual() {
+  const doAmbiente = config.emailProvider
+  if (doAmbiente && doAmbiente !== 'nenhum') return doAmbiente
+  return 'resend'
+}
+
 /** O que a tela pode mostrar sem expor o segredo. */
 export async function resumoDoEmail() {
   const chave = await chaveAtual()
   const row = await one(`SELECT email_key FROM settings WHERE id = true`).catch(() => null)
   return {
-    provedor: config.emailProvider,
+    provedor: chave ? provedorAtual() : 'nenhum',
     remetente: config.emailFrom,
     presente: Boolean(chave),
     tamanho: chave.length,
@@ -114,11 +132,11 @@ async function carregarPedido(orderId) {
 async function enviarUmaVez({ tipo, orderId, destino, assunto, html, responderPara }) {
   if (!destino) return { enviado: false, motivo: 'sem destinatário' }
 
-  const provider = getEmailProvider()
-  if (provider.id === 'nenhum') return { enviado: false, motivo: 'e-mail não configurado' }
-
   const chave = await chaveAtual()
   if (!chave) return { enviado: false, motivo: 'sem chave de e-mail' }
+
+  const provider = getEmailProvider(provedorAtual())
+  if (provider.id === 'nenhum') return { enviado: false, motivo: 'e-mail não configurado' }
 
   let reserva
   try {
