@@ -48,6 +48,11 @@ export const product = (r) => ({
   lengthCm: Number(r.length_cm ?? 0),
   widthCm: Number(r.width_cm ?? 0),
   heightCm: Number(r.height_cm ?? 0),
+  // Dados fiscais. fiscal_id nunca sai: e id interno do emissor.
+  ncm: r.ncm ?? '',
+  unitTrib: r.unit_trib ?? '',
+  gtin: r.gtin ?? '',
+  cclassTrib: r.cclass_trib ?? '',
   // [{ name: 'Cor', options: ['Azul','Vermelho'] }, …]
   variantAxes: r.variant_axes ?? [],
   variants: (r.variants ?? []).map(variant),
@@ -166,6 +171,25 @@ export const shipment = (r) =>
       }
     : null
 
+/** Nunca inclui `raw`: guarda a resposta crua do emissor. */
+export const invoice = (r) =>
+  r
+    ? {
+        id: r.id,
+        orderId: r.order_id,
+        provider: r.provider,
+        status: r.status,
+        numero: r.numero,
+        serie: r.serie,
+        chave: r.chave,
+        pdfUrl: r.pdf_url,
+        xmlUrl: r.xml_url,
+        error: r.error,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      }
+    : null
+
 export const settings = (r) => ({
   storeName: r.store_name,
   tagline: r.tagline,
@@ -180,6 +204,11 @@ export const settings = (r) => ({
   autoLabel: r.auto_label ?? true,
   notifyEmail: r.notify_email ?? '',
   notifyCustomer: r.notify_customer !== false,
+  autoInvoice: r.auto_invoice !== false,
+  // Booleano, nunca a chave: a tela so precisa saber se ha emissor ligado.
+  fiscalPresente: Boolean(r.fiscal_key),
+  fiscalSandbox: Boolean(r.fiscal_sandbox),
+  fiscalBankId: r.fiscal_bank_id ?? '',
   // Remetente da etiqueta, em campos separados.
   senderName: r.sender_name ?? '',
   senderDoc: r.sender_doc ?? '',

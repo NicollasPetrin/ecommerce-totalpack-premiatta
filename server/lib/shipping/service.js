@@ -1,5 +1,6 @@
 import { many, one, transaction } from '../../db/pool.js'
 import { config } from '../../config.js'
+import { chaveDaNota } from '../fiscal/service.js'
 import { getShippingProvider } from './index.js'
 import { avisarPedidoEnviado } from '../email/service.js'
 
@@ -239,6 +240,11 @@ export async function autoBuyLabel(orderId) {
         id: pedido.id,
         codigo: `#${String(pedido.seq).padStart(4, '0')}`,
         total: Number(pedido.total),
+        /* Chave da NF-e, quando existe. Vai impressa na etiqueta: e o que
+           torna o embarque regular para quem vende com CNPJ. Vazia significa
+           que a loja ainda nao emite nota daqui, e a etiqueta sai como
+           declaracao de conteudo. */
+        notaChave: await chaveDaNota(pedido.id),
         destinatario: {
           nome: pedido.customer_name,
           telefone: pedido.customer_phone,

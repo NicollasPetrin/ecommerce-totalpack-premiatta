@@ -66,6 +66,14 @@ export const config = {
      para o teste conseguir apontar tudo para um servidor falso. */
   emailBaseUrl: (process.env.EMAIL_BASE_URL ?? '').trim().replace(/\/+$/, ''),
 
+  /* ---- Nota fiscal ----
+     Vazio = a loja nao emite nota daqui; e o comportamento antigo. A chave
+     mora no painel, como as outras, pelo mesmo motivo. */
+  fiscalKey: (process.env.FISCAL_KEY ?? '').trim(),
+  /* Vazio = producao ou homologacao conforme a configuracao do painel. So
+     existe para o teste apontar para um servidor falso. */
+  fiscalBaseUrl: (process.env.FISCAL_BASE_URL ?? '').trim(),
+
   melhorEnvio: {
     baseUrl: (
       process.env.MELHORENVIO_BASE_URL ?? 'https://sandbox.melhorenvio.com.br'

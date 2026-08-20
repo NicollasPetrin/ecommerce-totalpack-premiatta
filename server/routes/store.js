@@ -11,6 +11,7 @@ import { config } from '../config.js'
 import { itensComMedidas, quoteForCart } from '../lib/shipping/service.js'
 import { esquecerToken } from '../lib/shipping/credenciais.js'
 import { esquecerChaveEmail } from '../lib/email/service.js'
+import { esquecerChaveFiscal } from '../lib/fiscal/service.js'
 import * as s from '../lib/serialize.js'
 
 export const storeRoutes = Router()
@@ -46,7 +47,14 @@ storeRoutes.put(
          notify_email = $22,
          notify_customer = $23,
          /* Mesma regra do token da transportadora: vazio = nao mexi. */
-         email_key = CASE WHEN $24 = '' THEN email_key ELSE $24 END
+         email_key = CASE WHEN $24 = '' THEN email_key ELSE $24 END,
+         /* E a chave do emissor de nota, pela mesma regra. */
+         fiscal_key = CASE WHEN $25 = '' THEN fiscal_key ELSE $25 END,
+         auto_invoice = $26,
+         fiscal_sandbox = $27,
+         fiscal_bank_id = $28,
+         /* Mesma regra das chaves: vazio = nao mexi. */
+         fiscal_webhook_secret = CASE WHEN $29 = '' THEN fiscal_webhook_secret ELSE $29 END
        WHERE id = true RETURNING *`,
       [
         d.storeName, d.tagline, d.email, d.phone, d.address, d.hours,
@@ -55,11 +63,14 @@ storeRoutes.put(
         d.senderNumber, d.senderCompl, d.senderDistrict,
         d.senderCity, d.senderState, d.melhorenvioToken, d.autoLabel,
         d.notifyEmail, d.notifyCustomer, d.emailKey,
+        d.fiscalKey, d.autoInvoice, d.fiscalSandbox, d.fiscalBankId,
+        d.fiscalWebhookSecret,
       ],
     )
     // A troca do token tem que valer na próxima cotação, não daqui a 30s.
     esquecerToken()
     esquecerChaveEmail()
+    esquecerChaveFiscal()
     res.json({ settings: s.settings(row) })
   }),
 )

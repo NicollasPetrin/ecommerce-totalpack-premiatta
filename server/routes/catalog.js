@@ -170,14 +170,16 @@ catalogRoutes.post(
         `INSERT INTO products
            (category_id, name, sku, description, price, promo, stock, unit,
             art, tint, image, specs, featured, active,
-            weight_g, length_cm, width_cm, height_cm, variant_axes)
+            weight_g, length_cm, width_cm, height_cm, variant_axes,
+            ncm, unit_trib, gtin, cclass_trib)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14,
-                 $15,$16,$17,$18,$19)
+                 $15,$16,$17,$18,$19,$20,$21,$22,$23)
          RETURNING *`,
         [
           d.categoryId, d.name, d.sku, d.description, d.price, d.promo, d.stock,
           d.unit, d.art, d.tint, d.image, JSON.stringify(d.specs), d.featured, d.active,
           d.weightG, d.lengthCm, d.widthCm, d.heightCm, JSON.stringify(d.variantAxes),
+          d.ncm, d.unitTrib, d.gtin, d.cclassTrib,
         ],
       )
       const produto = rows[0]
@@ -200,12 +202,14 @@ catalogRoutes.put(
            stock=$7, unit=$8, art=$9, tint=$10, image=$11, specs=$12::jsonb,
            featured=$13, active=$14,
            weight_g=$15, length_cm=$16, width_cm=$17, height_cm=$18,
-           variant_axes=$19::jsonb
-         WHERE id=$20 RETURNING *`,
+           variant_axes=$19::jsonb,
+           ncm=$20, unit_trib=$21, gtin=$22, cclass_trib=$23
+         WHERE id=$24 RETURNING *`,
         [
           d.categoryId, d.name, d.sku, d.description, d.price, d.promo, d.stock,
           d.unit, d.art, d.tint, d.image, JSON.stringify(d.specs), d.featured,
           d.active, d.weightG, d.lengthCm, d.widthCm, d.heightCm, JSON.stringify(d.variantAxes),
+          d.ncm, d.unitTrib, d.gtin, d.cclassTrib,
           req.params.id,
         ],
       )

@@ -551,3 +551,94 @@ DROP INDEX IF EXISTS email_log_unico;
 CREATE UNIQUE INDEX IF NOT EXISTS email_log_unico
   ON email_log (order_id, tipo)
   WHERE order_id IS NOT NULL AND status <> 'falhou';
+
+-- -----------------------------------------------------------------------------
+-- Nota fiscal
+--
+-- A loja vende mercadoria, então o documento é NF-e modelo 55 (SEFAZ, ICMS) e
+-- não NFS-e. O emissor cuida da apuração; daqui vai só o que o emissor não tem
+-- como saber: o que é cada produto e o que foi vendido.
+--
+-- Por isso os campos abaixo são poucos. É exatamente o que a API do Base ERP
+-- consome no cadastro de produto — NCM, unidade, código de barras e, para
+-- Regime Normal, a classificação tributária. CFOP, CST e alíquotas ficam na
+-- configuração fiscal do emissor, que é onde pertencem: mudam por operação e
+-- por regime, não por produto.
+-- -----------------------------------------------------------------------------
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS ncm         TEXT NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS gtin        TEXT NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS unit_trib   TEXT NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS cclass_trib TEXT NOT NULL DEFAULT '';
+
+-- Id do produto no emissor. Cadastrar a cada venda criaria duplicata e o
+-- estoque de lá viraria ficção; guardamos e reaproveitamos.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS fiscal_id TEXT NOT NULL DEFAULT '';
+
+-- Mesma ideia para quem já tem cadastro na loja.
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS fiscal_id TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS fiscal_key     TEXT    NOT NULL DEFAULT '';
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS auto_invoice   BOOLEAN NOT NULL DEFAULT true;
+-- Homologação emite nota sem valor fiscal: serve para conferir o layout antes
+-- de valer de verdade.
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS fiscal_sandbox BOOLEAN NOT NULL DEFAULT false;
+-- Conta do emissor onde o recebimento é lançado. Vazio = pedido sem pagamento
+-- anexado, o que é suficiente para a nota sair.
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS fiscal_bank_id TEXT    NOT NULL DEFAULT '';
+
+DO $$ BEGIN
+  CREATE TYPE invoice_status AS ENUM (
+    'rascunho',     -- pedido de venda criado, nota ainda não pedida
+    'processando',  -- emissão pedida; o emissor trabalha em fila
+    'autorizada',   -- SEFAZ autorizou, chave disponível
+    'rejeitada',    -- recusada; o motivo fica em `error`
+    'cancelada'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id    UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  provider    TEXT NOT NULL,
+  -- Id do pedido de venda no emissor; é por ele que a nota é pedida.
+  external_id TEXT NOT NULL DEFAULT '',
+  -- Id da nota em si, que só existe depois de pedida a emissão.
+  invoice_id  TEXT NOT NULL DEFAULT '',
+  status      invoice_status NOT NULL DEFAULT 'rascunho',
+  numero      TEXT NOT NULL DEFAULT '',
+  serie       TEXT NOT NULL DEFAULT '',
+  -- Chave de acesso, 44 dígitos. É ela que vai na etiqueta de envio.
+  chave       TEXT NOT NULL DEFAULT '',
+  pdf_url     TEXT NOT NULL DEFAULT '',
+  xml_url     TEXT NOT NULL DEFAULT '',
+  raw         JSONB NOT NULL DEFAULT '{}'::jsonb,
+  error       TEXT NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS invoices_order ON invoices (order_id, created_at DESC);
+
+-- O webhook acha a linha por (emissor, id do pedido de venda).
+CREATE UNIQUE INDEX IF NOT EXISTS invoices_externo
+  ON invoices (provider, external_id)
+  WHERE external_id <> '';
+
+-- Uma nota viva por pedido. Rejeitada e cancelada ficam de fora para uma nova
+-- tentativa ser possível depois de corrigir o cadastro.
+CREATE UNIQUE INDEX IF NOT EXISTS invoices_uma_por_pedido
+  ON invoices (order_id)
+  WHERE status NOT IN ('rejeitada', 'cancelada');
+
+DROP TRIGGER IF EXISTS invoices_touch ON invoices;
+CREATE TRIGGER invoices_touch BEFORE UPDATE ON invoices
+  FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+
+-- Segredo compartilhado do webhook do emissor.
+--
+-- Aqui o corpo da notificação É a fonte da verdade — diferente do webhook da
+-- transportadora, onde dá para reconsultar a API e ignorar o que chegou. Uma
+-- notificação forjada marcaria nota como autorizada e faria a loja despachar
+-- com chave inventada, então sem segredo configurado a rota recusa tudo.
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS fiscal_webhook_secret TEXT NOT NULL DEFAULT '';

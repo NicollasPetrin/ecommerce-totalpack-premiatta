@@ -8,6 +8,7 @@ import { config } from '../config.js'
 import { currentShippingProvider } from '../lib/shipping/index.js'
 import { buyLabel, createShipment, quoteForCart, syncShipment } from '../lib/shipping/service.js'
 import { resumoDoToken } from '../lib/shipping/credenciais.js'
+import { emissaoAtiva, emitirNota, notaDoPedido } from '../lib/fiscal/service.js'
 import * as s from '../lib/serialize.js'
 
 export const shipmentRoutes = Router()
@@ -203,7 +204,16 @@ shipmentRoutes.get(
       `SELECT * FROM shipments WHERE order_id = $1 ORDER BY created_at DESC`,
       [req.params.id],
     )
-    res.json({ shipments: rows.map(s.shipment), provider: config.shippingProvider })
+    /* A nota vem junto de propósito: com emissão ligada, o estado do envio
+       não se explica sem ela — uma etiqueta que "não saiu" pode estar apenas
+       esperando a SEFAZ, e sem isto na tela parece defeito. */
+    const nota = await notaDoPedido(req.params.id)
+    res.json({
+      shipments: rows.map(s.shipment),
+      provider: config.shippingProvider,
+      invoice: s.invoice(nota),
+      emiteNota: await emissaoAtiva(),
+    })
   }),
 )
 
@@ -317,5 +327,34 @@ shipmentRoutes.post(
       [req.params.id],
     )
     res.json({ shipment: s.shipment(atual) })
+  }),
+)
+
+/* ------------------------------------------------------------ Nota fiscal */
+
+/**
+ * Emite (ou tenta de novo) a nota do pedido.
+ *
+ * O caminho normal é automático, na confirmação do pagamento. Este botão
+ * existe para o caso que sempre acontece: a emissão foi recusada porque
+ * faltava NCM, alguém corrigiu o produto, e agora precisa de uma segunda
+ * chance. Sem ele o pedido ficaria parado para sempre.
+ *
+ * Nota rejeitada não bloqueia a nova tentativa — o índice único ignora
+ * 'rejeitada' e 'cancelada' justamente por isso.
+ */
+shipmentRoutes.post(
+  '/orders/:id/invoice',
+  limiteExterno,
+  wrap(async (req, res) => {
+    const pedido = await one(`SELECT id FROM orders WHERE id = $1`, [req.params.id])
+    if (!pedido) throw notFound('Pedido não encontrado.')
+
+    const resultado = await emitirNota(req.params.id)
+    const nota = await notaDoPedido(req.params.id)
+
+    // 200 mesmo na recusa: a falha é do cadastro, não da requisição, e o
+    // motivo é o que a tela precisa mostrar.
+    res.json({ ok: resultado.feito, motivo: resultado.motivo ?? '', invoice: s.invoice(nota) })
   }),
 )

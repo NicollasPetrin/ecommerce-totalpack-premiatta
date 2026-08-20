@@ -1,4 +1,5 @@
 import { config } from '../../config.js'
+import { segredoConfere } from '../security.js'
 import { onlyDigits } from '../document.js'
 
 /**
@@ -215,13 +216,7 @@ export const asaas = {
     if (!esperado) return false
 
     const recebido = h['asaas-access-token'] ?? h['Asaas-Access-Token'] ?? ''
-    if (recebido.length !== esperado.length) return false
-
-    let diff = 0
-    for (let i = 0; i < esperado.length; i++) {
-      diff |= esperado.charCodeAt(i) ^ recebido.charCodeAt(i)
-    }
-    return diff === 0
+    return segredoConfere(recebido, esperado)
   },
 
   parseEvent({ body }) {

@@ -3,6 +3,7 @@ import { getProvider } from './index.js'
 import { restoreStock } from '../stock.js'
 import { autoBuyLabel } from '../shipping/service.js'
 import { avisarPagamentoConfirmado } from '../email/service.js'
+import { emissaoAtiva, emitirNota } from '../fiscal/service.js'
 import { config } from '../../config.js'
 
 /**
@@ -150,9 +151,22 @@ export async function applyPaymentEvent({ provider, providerRef, status, paidAt,
          durante uma chamada de rede. E se a compra falhar, o pagamento
          continua confirmado — o dinheiro já entrou. */
       if (resultado.applied && resultado.virouPago) {
-        // O aviso vem antes da etiqueta: o cliente não deve esperar a
+        // O aviso vem antes de tudo: o cliente não deve esperar emissor nem
         // transportadora para saber que o pagamento entrou.
         await avisarPagamentoConfirmado(resultado.payment.order_id)
+
+        /* Com nota fiscal configurada, a ordem muda: a chave de acesso é
+           impressa na etiqueta, então a nota tem de sair primeiro. E como a
+           emissão é assíncrona, quem compra a etiqueta é o webhook do emissor,
+           quando a nota autoriza — não daqui.
+
+           Sem nota configurada, nada disso existe e a etiqueta sai na hora,
+           como sempre saiu. */
+        if (await emissaoAtiva()) {
+          const nf = await emitirNota(resultado.payment.order_id)
+          return { ...resultado, nota: nf }
+        }
+
         const r = await autoBuyLabel(resultado.payment.order_id)
         return { ...resultado, etiqueta: r }
       }

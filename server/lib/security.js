@@ -60,3 +60,26 @@ export function securityHeaders(_req, res, next) {
 
   next()
 }
+
+/**
+ * Compara dois segredos em tempo constante.
+ *
+ * Comparar com `===` sai no primeiro caractere diferente, e a diferença de
+ * tempo entre "errou na primeira letra" e "errou na última" é medível pela
+ * rede. Com paciência, dá para descobrir o segredo uma letra por vez.
+ *
+ * O tamanho é conferido antes, e isso vaza só o comprimento — que não ajuda
+ * quem ataca, porque comparar tamanhos diferentes exigiria percorrer o maior
+ * dos dois e o vazamento seria o mesmo.
+ */
+export function segredoConfere(recebido, esperado) {
+  const a = String(recebido ?? '')
+  const b = String(esperado ?? '')
+  if (!b || a.length !== b.length) return false
+
+  let diff = 0
+  for (let i = 0; i < b.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return diff === 0
+}

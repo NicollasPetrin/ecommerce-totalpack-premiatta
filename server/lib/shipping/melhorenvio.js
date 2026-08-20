@@ -192,9 +192,11 @@ export const melhorenvio = {
           receipt: false,
           own_hand: false,
           reverse: false,
-          non_commercial: true,
-          // Aparece na etiqueta e liga a encomenda ao pedido na loja.
-          invoice: { key: '' },
+          /* Com NF-e, o embarque e comercial e a chave vai na etiqueta.
+             Sem ela, segue como declaracao de conteudo — que e o que a loja
+             podia fazer antes de ter emissor de nota. */
+          non_commercial: !pedido.notaChave,
+          invoice: { key: pedido.notaChave ?? '' },
           platform: 'TotalPack',
           tags: [{ tag: pedido.codigo, url: null }],
         },

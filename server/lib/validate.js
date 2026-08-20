@@ -140,6 +140,32 @@ export const schemas = {
       lengthCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
       widthCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
       heightCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
+
+      /* Dados fiscais. Como as medidas, ficar em branco é permitido: o produto
+         vende, só não entra em nota. Recusar o cadastro incompleto obrigaria a
+         ter o NCM em mãos para lançar um produto, e não é assim que se
+         trabalha — o NCM chega depois, do contador ou do fornecedor. */
+      ncm: z
+        .string()
+        .trim()
+        // Aceita "4802.56.99" como se digita na tabela e guarda só os dígitos.
+        .transform((v) => v.replace(/\D/g, ''))
+        .refine((v) => v === '' || v.length === 8, 'O NCM tem 8 dígitos.')
+        .default(''),
+      // Unidade tributável: 'UN', 'CX', 'RM'. Máximo de 6 no emissor.
+      unitTrib: z.string().trim().toUpperCase().max(6, 'Unidade fiscal muito longa.').default(''),
+      gtin: z
+        .string()
+        .trim()
+        .transform((v) => v.replace(/\D/g, ''))
+        .refine(
+          (v) => v === '' || [8, 12, 13, 14].includes(v.length),
+          'O código de barras tem 8, 12, 13 ou 14 dígitos.',
+        )
+        .default(''),
+      // Classificação tributária da Reforma; só vale para Regime Normal.
+      cclassTrib: z.string().trim().max(20).default(''),
+
       /* Grade: eixos com as suas opções.
        *
        * Os tetos existem porque o smoke test mostrou que sem eles um erro de
@@ -290,6 +316,11 @@ export const schemas = {
     emailKey: z.string().trim().max(400).default(''),
     notifyEmail: z.string().trim().max(160).default(''),
     notifyCustomer: z.boolean().default(true),
+    fiscalKey: z.string().trim().max(400).default(''),
+    autoInvoice: z.boolean().default(true),
+    fiscalSandbox: z.boolean().default(false),
+    fiscalBankId: z.string().trim().max(30).default(''),
+    fiscalWebhookSecret: z.string().trim().max(200).default(''),
   }),
 
   order: z

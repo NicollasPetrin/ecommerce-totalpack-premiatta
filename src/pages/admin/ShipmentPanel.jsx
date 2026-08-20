@@ -23,6 +23,22 @@ const STATUS_ROTULO = {
   erro: 'Erro',
 }
 
+const NF_ROTULO = {
+  rascunho: 'não pedida',
+  processando: 'aguardando SEFAZ',
+  autorizada: 'autorizada',
+  rejeitada: 'recusada',
+  cancelada: 'cancelada',
+}
+
+const NF_TOM = {
+  rascunho: 'gray',
+  processando: 'gold',
+  autorizada: 'green',
+  rejeitada: 'red',
+  cancelada: 'red',
+}
+
 const STATUS_TOM = {
   rascunho: 'gray',
   pago: 'blue',
@@ -39,6 +55,8 @@ export default function ShipmentPanel({ order, toast }) {
   // "nenhuma transportadora integrada", que é uma afirmação falsa.
   const [provider, setProvider] = useState(null)
   const [servicos, setServicos] = useState(null)
+  const [nota, setNota] = useState(null)
+  const [emiteNota, setEmiteNota] = useState(false)
   const [carregando, setCarregando] = useState('')
   const [erro, setErro] = useState('')
 
@@ -47,6 +65,8 @@ export default function ShipmentPanel({ order, toast }) {
       const r = await api.get(`/orders/${order.id}/shipments`)
       setEnvios(r.shipments ?? [])
       setProvider(r.provider ?? 'manual')
+      setNota(r.invoice ?? null)
+      setEmiteNota(Boolean(r.emiteNota))
     } catch (e) {
       setErro(e.message)
     }
@@ -92,6 +112,13 @@ export default function ShipmentPanel({ order, toast }) {
 
   const conferir = (id) => acao('conferir', () => api.post(`/shipments/${id}/sync`))
 
+  const emitir = () =>
+    acao('emitir', async () => {
+      const r = await api.post(`/orders/${order.id}/invoice`)
+      // A recusa vem em 200: o problema é o cadastro, não a requisição.
+      toast?.(r.ok ? 'Nota pedida ao emissor.' : r.motivo, r.ok ? 'ok' : 'err')
+    })
+
   const cancelar = (id) =>
     acao('cancelar', async () => {
       await api.post(`/shipments/${id}/cancel`)
@@ -123,9 +150,81 @@ export default function ShipmentPanel({ order, toast }) {
 
   const ativo = envios.find((e) => !['cancelado', 'erro'].includes(e.status))
 
+  /* Com nota ligada, a etiqueta espera a SEFAZ. Dizer isso explicitamente
+     evita a leitura errada — "a etiqueta falhou" — quando na verdade está
+     tudo certo e só falta autorizar. */
+  const esperandoNota = emiteNota && !ativo && nota?.status === 'processando'
+
   return (
     <section className="ship">
       <h3 className="odetail__title">Envio</h3>
+
+      {emiteNota && (
+        <div className="ship__nf">
+          <div className="ship__nfhead">
+            <strong>Nota fiscal</strong>
+            {nota ? (
+              <span className={`tag tag--${NF_TOM[nota.status] ?? 'gray'}`}>
+                {NF_ROTULO[nota.status] ?? nota.status}
+              </span>
+            ) : (
+              <span className="tag tag--gray">sem nota</span>
+            )}
+          </div>
+
+          {nota?.status === 'autorizada' && (
+            <p className="hint">
+              Nº {nota.numero || '—'}
+              {nota.serie && ` · série ${nota.serie}`} · chave {nota.chave}
+              {nota.pdfUrl && (
+                <>
+                  {' · '}
+                  <a href={nota.pdfUrl} target="_blank" rel="noreferrer">
+                    DANFE
+                  </a>
+                </>
+              )}
+              {nota.xmlUrl && (
+                <>
+                  {' · '}
+                  <a href={nota.xmlUrl} target="_blank" rel="noreferrer">
+                    XML
+                  </a>
+                </>
+              )}
+            </p>
+          )}
+
+          {nota?.status === 'processando' && (
+            <p className="hint">
+              Pedida ao emissor. A etiqueta sai sozinha quando a SEFAZ autorizar —
+              a chave da nota vai impressa nela.
+            </p>
+          )}
+
+          {nota?.error && <p className="ship__erro">{nota.error}</p>}
+
+          {(!nota || ['rejeitada', 'cancelada'].includes(nota.status)) && (
+            <button
+              className="btn btn--sm"
+              onClick={emitir}
+              disabled={carregando === 'emitir'}
+            >
+              {carregando === 'emitir'
+                ? 'Emitindo…'
+                : nota
+                  ? 'Tentar emitir de novo'
+                  : 'Emitir nota'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {esperandoNota && (
+        <p className="hint">
+          A compra da etiqueta está esperando a nota autorizar. Não é erro.
+        </p>
+      )}
 
       {erro && (
         <p className="err ship__erro">

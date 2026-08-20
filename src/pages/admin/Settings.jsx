@@ -129,6 +129,95 @@ export default function AdminSettings() {
 
             <hr className="rule" />
 
+            <h3 className="apage__sub">Nota fiscal</h3>
+            <p className="hint">
+              Emite NF-e (modelo 55) pelo Base ERP quando o pagamento confirma. Com
+              a nota ligada, a etiqueta passa a esperar a autorização da SEFAZ — é a
+              chave de acesso que vai impressa nela.
+            </p>
+
+            <div className="field">
+              <label htmlFor="s-fiscalkey">Chave da API do emissor</label>
+              <input
+                id="s-fiscalkey"
+                className="input"
+                type="password"
+                value={f.fiscalKey ?? ''}
+                onChange={set('fiscalKey')}
+                placeholder="cole a chave do Base ERP"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <span className="hint">
+                Como as outras, o valor gravado nunca volta para esta tela: deixar
+                em branco mantém o que já está salvo.
+              </span>
+            </div>
+
+            <div className="field">
+              <label htmlFor="s-fiscalsecret">Segredo do webhook</label>
+              <input
+                id="s-fiscalsecret"
+                className="input"
+                type="password"
+                value={f.fiscalWebhookSecret ?? ''}
+                onChange={set('fiscalWebhookSecret')}
+                placeholder="invente uma senha longa e cole igual no emissor"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <span className="hint">
+                É por webhook que a chave da nota chega, e é o corpo dele que a loja
+                acredita. Sem este segredo a rota recusa tudo — de propósito, porque
+                uma notificação forjada faria a loja despachar com nota inventada.
+              </span>
+            </div>
+
+            <div className="field">
+              <label htmlFor="s-bankid">Conta do emissor (bankId)</label>
+              <input
+                id="s-bankid"
+                className="input"
+                inputMode="numeric"
+                value={f.fiscalBankId ?? ''}
+                onChange={set('fiscalBankId')}
+                placeholder="opcional"
+              />
+              <span className="hint">
+                Onde o recebimento é lançado no Base. Em branco a nota sai igual,
+                só sem o pagamento anexado.
+              </span>
+            </div>
+
+            <label className="switchrow">
+              <input
+                type="checkbox"
+                checked={f.autoInvoice !== false}
+                onChange={set('autoInvoice')}
+              />
+              <span>
+                <strong>Emitir a nota automaticamente</strong>
+                Assim que o pagamento confirma. Desligado, a loja volta a comprar a
+                etiqueta na hora e a nota fica por sua conta, fora do site.
+              </span>
+            </label>
+
+            <label className="switchrow">
+              <input
+                type="checkbox"
+                checked={Boolean(f.fiscalSandbox)}
+                onChange={set('fiscalSandbox')}
+              />
+              <span>
+                <strong>Homologação</strong>
+                Emite contra o ambiente de teste da SEFAZ. As notas saem com o
+                layout certo mas <em>sem valor fiscal</em> — serve para conferir o
+                cadastro antes de valer de verdade. Lembre de desligar depois.
+              </span>
+            </label>
+
+            <hr className="rule" />
+
             <h3 className="apage__sub">Avisos por e-mail</h3>
             <p className="hint">
               A loja avisa você a cada venda, e o cliente a cada etapa — incluindo

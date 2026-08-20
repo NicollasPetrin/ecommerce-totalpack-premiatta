@@ -1278,3 +1278,26 @@
 }
 
 .switchrow strong { font-size: var(--fs-footnote); color: var(--label); }
+
+/* Nota fiscal dentro do painel de envio. Fica acima da etiqueta porque é o
+   que acontece primeiro: sem nota autorizada, não há o que despachar. */
+.ship__nf {
+  padding: 11px;
+  margin-bottom: 10px;
+  border-radius: var(--r-sm);
+  background: var(--bg-grouped);
+  border: 1px solid var(--separator);
+}
+
+.ship__nfhead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 6px;
+}
+
+/* A chave tem 44 dígitos e não cabe em tela estreita: quebra em vez de
+   esticar o painel inteiro. */
+.ship__nf .hint { overflow-wrap: anywhere; }
+
+.ship__nf .btn { margin-top: 8px; }

@@ -33,6 +33,11 @@ const blank = (categoryId) => ({
   lengthCm: '',
   widthCm: '',
   heightCm: '',
+  // Dados fiscais, usados quando a nota e emitida pelo site.
+  ncm: '',
+  unitTrib: '',
+  gtin: '',
+  cclassTrib: '',
   variantAxes: [],
   variants: [],
 })
@@ -119,6 +124,12 @@ export default function AdminProducts() {
     (p) => p.active && !(p.weightG > 0 && p.lengthCm > 0 && p.widthCm > 0 && p.heightCm > 0),
   )
 
+  /* Só cobra dado fiscal de quem emite nota pelo site. Para quem emite por
+     fora, o campo em branco é a resposta certa e o aviso seria só barulho. */
+  const semFiscal = settings.fiscalPresente
+    ? products.filter((p) => p.active && !(p.ncm && p.unitTrib))
+    : []
+
   return (
     <>
       <header className="apage__head">
@@ -155,6 +166,32 @@ export default function AdminProducts() {
           <button
             className="btn btn--primary btn--sm"
             onClick={() => setEditing(semMedidas[0])}
+          >
+            Preencher agora
+          </button>
+        </div>
+      )}
+
+      {/* Mesma ideia do aviso acima, um passo depois: sem NCM a venda acontece,
+          mas a nota não sai — e aí a mercadoria fica parada esperando. */}
+      {semFiscal.length > 0 && (
+        <div className="avisofrete">
+          <Icon name="alert" size={18} />
+          <div>
+            <strong>
+              {semFiscal.length === 1
+                ? '1 produto sem dados fiscais'
+                : `${semFiscal.length} produtos sem dados fiscais`}
+            </strong>
+            <p>
+              Sem NCM e unidade fiscal a NF-e não é emitida, e a etiqueta fica
+              esperando a nota: {semFiscal.slice(0, 4).map((p) => p.name).join(', ')}
+              {semFiscal.length > 4 && ` e mais ${semFiscal.length - 4}`}.
+            </p>
+          </div>
+          <button
+            className="btn btn--primary btn--sm"
+            onClick={() => setEditing(semFiscal[0])}
           >
             Preencher agora
           </button>
@@ -345,6 +382,10 @@ function ProductForm({ value, categories, onClose, onSave }) {
     lengthCm: value.lengthCm ? String(value.lengthCm) : '',
     widthCm: value.widthCm ? String(value.widthCm) : '',
     heightCm: value.heightCm ? String(value.heightCm) : '',
+    ncm: value.ncm ?? '',
+    unitTrib: value.unitTrib ?? '',
+    gtin: value.gtin ?? '',
+    cclassTrib: value.cclassTrib ?? '',
     variantAxes: (value.variantAxes ?? []).map((a) => ({ ...a, uid: uid() })),
     variants: (value.variants ?? []).map((v) => ({
       ...v,
@@ -543,6 +584,10 @@ function ProductForm({ value, categories, onClose, onSave }) {
       lengthCm: medida(f.lengthCm),
       widthCm: medida(f.widthCm),
       heightCm: medida(f.heightCm),
+      ncm: f.ncm.trim(),
+      unitTrib: f.unitTrib.trim().toUpperCase(),
+      gtin: f.gtin.trim(),
+      cclassTrib: f.cclassTrib.trim(),
       variantAxes: eixos,
       variants: variacoes,
     })
@@ -753,6 +798,64 @@ function ProductForm({ value, categories, onClose, onSave }) {
                   onChange={(e) => set('heightCm', e.target.value.replace(/[^\d,.]/g, ''))}
                   placeholder="5"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Dados fiscais — o que a nota exige e o emissor não tem como saber */}
+          <div className="field">
+            <span className="label">Dados fiscais</span>
+            <p className="hint">
+              Usados para emitir a NF-e. Pode deixar em branco agora: o produto vende
+              normalmente, só não entra em nota. CFOP, CST e alíquotas ficam na
+              configuração do emissor — mudam por operação, não por produto.
+            </p>
+            <div className="form-grid form-grid--4">
+              <div className="field">
+                <label htmlFor="pf-ncm">NCM</label>
+                <input
+                  id="pf-ncm"
+                  className="input"
+                  inputMode="numeric"
+                  value={f.ncm}
+                  onChange={(e) => set('ncm', e.target.value.replace(/[^\d.]/g, '').slice(0, 10))}
+                  placeholder="4802.56.99"
+                />
+                <span className="hint">8 dígitos. Pode digitar com pontos.</span>
+              </div>
+              <div className="field">
+                <label htmlFor="pf-untrib">Unidade fiscal</label>
+                <input
+                  id="pf-untrib"
+                  className="input"
+                  value={f.unitTrib}
+                  onChange={(e) => set('unitTrib', e.target.value.toUpperCase().slice(0, 6))}
+                  placeholder="RM"
+                />
+                <span className="hint">Como sai na nota: UN, CX, RM, PCT.</span>
+              </div>
+              <div className="field">
+                <label htmlFor="pf-gtin">Código de barras</label>
+                <input
+                  id="pf-gtin"
+                  className="input"
+                  inputMode="numeric"
+                  value={f.gtin}
+                  onChange={(e) => set('gtin', e.target.value.replace(/\D/g, '').slice(0, 14))}
+                  placeholder="7891234567895"
+                />
+                <span className="hint">EAN/GTIN, se o produto tiver.</span>
+              </div>
+              <div className="field">
+                <label htmlFor="pf-cclass">Class. tributária</label>
+                <input
+                  id="pf-cclass"
+                  className="input"
+                  value={f.cclassTrib}
+                  onChange={(e) => set('cclassTrib', e.target.value.slice(0, 20))}
+                  placeholder="opcional"
+                />
+                <span className="hint">Só para Regime Normal.</span>
               </div>
             </div>
           </div>
