@@ -32,7 +32,7 @@ const COM_VARIACOES = `
  * os itens de pedido apontam para elas, e recriar quebraria esse vínculo com
  * o histórico. O que sumiu da lista é removido de fato.
  */
-async function salvarVariacoes(client, productId, variantes) {
+export async function salvarVariacoes(client, productId, variantes) {
   const manter = variantes.map((v) => v.id).filter(Boolean)
 
   await client.query(

@@ -1437,6 +1437,11 @@
   color: var(--label-2);
   line-height: 1.6;
   font-size: var(--fs-callout);
+  /* As descrições vêm com quebras de linha e listas em ✅, escritas para serem
+     lidas em blocos. Sem isto o HTML junta tudo num parágrafo só e a lista de
+     características vira uma parede de texto. `pre-line` respeita a quebra sem
+     congelar os espaços, então o texto ainda reflui na tela estreita. */
+  white-space: pre-line;
 }
 
 .pdp__stock { margin-bottom: 22px; }

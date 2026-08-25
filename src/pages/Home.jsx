@@ -19,8 +19,15 @@ export default function Home() {
 
   const live = products.filter((p) => p.active)
   const featured = live.filter((p) => p.featured).slice(0, 4)
-  const ordered = [...categories].sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
   const countOf = (catId) => live.filter((p) => p.categoryId === catId).length
+
+  /* Categoria vazia sai da vitrine. Um cartão anunciando "Cadernos — 0
+     produtos" convida ao clique e entrega uma tela em branco; enquanto não
+     houver o que vender ali, é melhor a categoria não existir para quem
+     compra. Ela volta sozinha assim que o primeiro produto entrar. */
+  const ordered = [...categories]
+    .filter((c) => countOf(c.id) > 0)
+    .sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
 
   /* Vitrine do carrossel: destaques primeiro, completados com promoções até
      dar um giro que valha a pena. */
