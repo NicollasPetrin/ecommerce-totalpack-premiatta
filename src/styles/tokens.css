@@ -329,12 +329,12 @@ ol {
    arredondamento total resulta num círculo perfeito — e não numa elipse, que
    é o que aconteceria com uma imagem retangular.
    O fundo branco cobre qualquer sobra de antisserrilhado nas bordas. */
+/* A arte já vem recortada e com fundo transparente, então nada de máscara
+   redonda nem de fundo branco aqui: o círculo cortaria o "TOTAL PACK", que
+   passa das bordas, e o branco viraria um quadrado aceso no tema escuro. */
 .brand-logo {
-  width: auto;
   aspect-ratio: 1;
-  border-radius: 50%;
-  object-fit: cover;
-  background: #fff;
+  object-fit: contain;
 }
 
 .sr-only {
