@@ -2826,3 +2826,16 @@
   .shipcalc__alt,
   .shipcalc__nota { padding-left: 0; }
 }
+
+/* Campo-armadilha contra robô de formulário.
+   Não usa `display:none` nem `hidden`: muitos preenchedores automáticos pulam
+   o que está explicitamente escondido, e aí a armadilha nunca dispara. Tirar
+   da tela pelo posicionamento mantém o campo "real" para quem varre o HTML,
+   enquanto aria-hidden e tabIndex=-1 mantêm gente de verdade longe dele. */
+.armadilha {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

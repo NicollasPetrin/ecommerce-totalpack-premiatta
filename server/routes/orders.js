@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { Router } from 'express'
 import { many, one, transaction } from '../db/pool.js'
 import { wrap, badRequest, notFound, conflict } from '../lib/http.js'
@@ -60,6 +61,20 @@ orderRoutes.post(
   limitePedido,
   wrap(async (req, res) => {
     const d = parse(schemas.order, req.body)
+
+    /* Armadilha preenchida: quem chegou aqui foi um robô de formulário.
+     *
+     * A resposta é 201 com um id inventado, e não um erro. Devolver 400
+     * ensinaria o robô qual campo o denunciou, e a próxima tentativa viria
+     * sem ele. Sucesso falso custa a mesma requisição e não ensina nada —
+     * e nada é gravado, nem cobrança criada, nem estoque baixado. */
+    if (d.website) {
+      console.warn(`[bot] pedido descartado pela armadilha — ip ${req.ip}`)
+      return res.status(201).json({
+        order: { id: randomUUID(), seq: 0, status: 'pendente', total: 0, items: [] },
+      })
+    }
+
     const customerId = req.user?.role === 'customer' ? req.user.sub : null
 
     const settings = await one(`SELECT * FROM settings WHERE id = true`)

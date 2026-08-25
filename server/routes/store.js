@@ -12,6 +12,7 @@ import { itensComMedidas, quoteForCart } from '../lib/shipping/service.js'
 import { esquecerToken } from '../lib/shipping/credenciais.js'
 import { esquecerChaveEmail } from '../lib/email/service.js'
 import { esquecerChaveFiscal } from '../lib/fiscal/service.js'
+import { guardar } from '../lib/cofre.js'
 import * as s from '../lib/serialize.js'
 
 export const storeRoutes = Router()
@@ -61,10 +62,10 @@ storeRoutes.put(
         d.instagram, d.pixKey, d.freeShippingFrom, d.lowStockThreshold,
         d.senderName, d.senderDoc, d.senderCep, d.senderStreet,
         d.senderNumber, d.senderCompl, d.senderDistrict,
-        d.senderCity, d.senderState, d.melhorenvioToken, d.autoLabel,
-        d.notifyEmail, d.notifyCustomer, d.emailKey,
-        d.fiscalKey, d.autoInvoice, d.fiscalSandbox, d.fiscalBankId,
-        d.fiscalWebhookSecret,
+        d.senderCity, d.senderState, guardar(d.melhorenvioToken), d.autoLabel,
+        d.notifyEmail, d.notifyCustomer, guardar(d.emailKey),
+        guardar(d.fiscalKey), d.autoInvoice, d.fiscalSandbox, d.fiscalBankId,
+        guardar(d.fiscalWebhookSecret),
       ],
     )
     // A troca do token tem que valer na próxima cotação, não daqui a 30s.

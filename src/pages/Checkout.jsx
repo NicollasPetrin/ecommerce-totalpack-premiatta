@@ -280,6 +280,23 @@ export default function Checkout() {
       </header>
 
       <form className="checkout__grid" onSubmit={submit} noValidate>
+        {/* Armadilha para robô. Fica fora da ordem de tabulação e escondido
+            do leitor de tela, então ninguém de verdade chega nele — mas
+            preenchedor automático de formulário preenche tudo que encontra.
+            O servidor descarta o pedido quando vier preenchido. */}
+        <div className="armadilha" aria-hidden="true">
+          <label htmlFor="website">Não preencha este campo</label>
+          <input
+            id="website"
+            name="website"
+            type="text"
+            tabIndex={-1}
+            autoComplete="off"
+            value={form.website ?? ''}
+            onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
+          />
+        </div>
+
         <div className="checkout__form">
           {!currentCustomer && (
             <div className="loginhint">

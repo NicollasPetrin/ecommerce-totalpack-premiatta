@@ -36,7 +36,7 @@ async function chaveAtual() {
   let doBanco = ''
   try {
     const row = await one(`SELECT email_key FROM settings WHERE id = true`)
-    doBanco = limparChave(row?.email_key)
+    doBanco = limparChave(abrir(row?.email_key))
   } catch (err) {
     console.error('[email] não foi possível ler a chave do banco:', err.message)
   }

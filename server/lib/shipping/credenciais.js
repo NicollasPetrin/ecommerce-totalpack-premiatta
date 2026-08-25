@@ -1,5 +1,6 @@
 import { one } from '../../db/pool.js'
 import { config } from '../../config.js'
+import { abrir } from '../cofre.js'
 
 /**
  * De onde sai o token da transportadora.
@@ -31,7 +32,7 @@ export async function tokenDaTransportadora() {
   let doBanco = ''
   try {
     const row = await one(`SELECT melhorenvio_token FROM settings WHERE id = true`)
-    doBanco = limpar(row?.melhorenvio_token)
+    doBanco = limpar(abrir(row?.melhorenvio_token))
   } catch (err) {
     // Banco fora do ar não pode derrubar a cotação de vez: cai no ambiente.
     console.error('[frete] não foi possível ler o token do banco:', err.message)
@@ -57,6 +58,6 @@ export async function resumoDoToken() {
     // Todo JWT começa com "eyJ" — isto não revela nada e separa o token de
     // acesso do client_secret, que é a confusão que já custou horas.
     pareceToken: /^eyJ[\w-]+\.[\w-]+\./.test(t),
-    origem: limpar(row?.melhorenvio_token) ? 'painel' : 'variável de ambiente',
+    origem: limpar(abrir(row?.melhorenvio_token)) ? 'painel' : 'variável de ambiente',
   }
 }

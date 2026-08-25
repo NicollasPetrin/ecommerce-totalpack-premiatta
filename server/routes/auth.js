@@ -32,6 +32,15 @@ authRoutes.post(
   wrap(async (req, res) => {
     const data = parse(schemas.signup, req.body)
 
+    /* Armadilha para robô, igual à do pedido: campo escondido que só
+       preenchedor automático de formulário preenche. Devolve o mesmo formato
+       de sucesso, sem gravar nada — recusar com erro ensinaria qual campo
+       denunciou, e a próxima tentativa viria sem ele. */
+    if (data.website) {
+      console.warn(`[bot] cadastro descartado pela armadilha — ip ${req.ip}`)
+      return res.status(201).json({ customer: null })
+    }
+
     const existing = await one(`SELECT id FROM customers WHERE lower(email) = $1`, [data.email])
     if (existing) throw conflict('Já existe uma conta com este e-mail.')
 

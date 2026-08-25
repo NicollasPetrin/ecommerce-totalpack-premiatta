@@ -421,6 +421,8 @@ export function StoreProvider({ children }) {
         name: form.name,
         email: form.email ?? '',
         phone: form.phone,
+        // Armadilha: vazio em gente, preenchido em robô.
+        website: form.website ?? '',
         cpfCnpj: form.cpfCnpj ?? '',
         delivery: form.delivery,
         payment: form.payment,

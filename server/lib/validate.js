@@ -70,6 +70,8 @@ const documento = z
 
 export const schemas = {
   signup: z.object({
+    // Mesma armadilha do pedido.
+    website: z.string().max(200).optional().default(''),
     name: z.string().trim().min(3, 'Informe o nome completo.'),
     email: z.string().trim().toLowerCase().email('E-mail inválido.'),
     phone: z.string().trim().min(10, 'Telefone incompleto.'),
@@ -332,6 +334,15 @@ export const schemas = {
 
   order: z
     .object({
+      /* Armadilha para robô: o campo existe no formulário, fica escondido do
+         olho e do leitor de tela, e ninguém de verdade o preenche. Preenchedor
+         automático de formulário preenche tudo que encontra — é o jeito mais
+         barato de separar os dois, sem CAPTCHA e sem atrito para quem compra.
+
+         Aceita string em vez de recusar no schema: a recusa acontece na rota,
+         com resposta de sucesso falso, para o robô não aprender o que o
+         denunciou. */
+      website: z.string().max(200).optional().default(''),
       // O cliente manda o que quer comprar; preço e frete são do servidor.
       items: z
         .array(

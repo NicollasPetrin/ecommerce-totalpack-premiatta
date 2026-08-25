@@ -1,6 +1,7 @@
 import { many, one } from '../../db/pool.js'
 import { config } from '../../config.js'
 import { getFiscalProvider } from './index.js'
+import { abrir } from '../cofre.js'
 
 /**
  * Emissão de nota fiscal.
@@ -30,7 +31,7 @@ async function chaveAtual() {
   let doBanco = ''
   try {
     const row = await one(`SELECT fiscal_key FROM settings WHERE id = true`)
-    doBanco = limpar(row?.fiscal_key)
+    doBanco = limpar(abrir(row?.fiscal_key))
   } catch (err) {
     console.error('[nota] não foi possível ler a chave do banco:', err.message)
   }
@@ -57,7 +58,7 @@ export async function resumoDoFiscal() {
     tamanho: chave.length,
     automatica: cfg?.auto_invoice !== false,
     homologacao: Boolean(cfg?.fiscal_sandbox),
-    origem: limpar(cfg?.fiscal_key) ? 'painel' : 'variável de ambiente',
+    origem: limpar(abrir(cfg?.fiscal_key)) ? 'painel' : 'variável de ambiente',
   }
 }
 

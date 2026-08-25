@@ -7,6 +7,7 @@ import cors from 'cors'
 import { config } from './config.js'
 import { pool } from './db/pool.js'
 import { readSession } from './lib/auth.js'
+import { protegerSegredosExistentes } from './lib/cofre.js'
 import { securityHeaders } from './lib/security.js'
 import { limiteGeral } from './lib/ratelimit.js'
 import { errorHandler, notFound } from './lib/http.js'
@@ -115,6 +116,11 @@ if (existsSync(distDir)) {
 }
 
 app.use(errorHandler)
+
+/* Cifra os segredos que já estavam gravados em texto puro. Roda uma vez e não
+   bloqueia a subida: sem isto, a proteção só valeria para chave colada depois
+   — e as que já estão lá são justamente as que importam. */
+protegerSegredosExistentes(pool).catch(() => {})
 
 const server = app.listen(config.port, () => {
   console.log(`[api] ouvindo em http://localhost:${config.port}`)

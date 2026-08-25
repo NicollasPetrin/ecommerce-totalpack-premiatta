@@ -9,6 +9,7 @@ import { autoBuyLabel, syncShipment } from '../lib/shipping/service.js'
 import { listFiscalProviders } from '../lib/fiscal/index.js'
 import { aplicarEventoFiscal } from '../lib/fiscal/service.js'
 import { segredoConfere } from '../lib/security.js'
+import { abrir } from '../lib/cofre.js'
 
 export const webhookRoutes = Router()
 
@@ -193,7 +194,7 @@ webhookRoutes.post(
     }
 
     const cfg = await one(`SELECT fiscal_webhook_secret FROM settings WHERE id = true`)
-    const esperado = String(cfg?.fiscal_webhook_secret ?? '')
+    const esperado = abrir(cfg?.fiscal_webhook_secret)
 
     if (!esperado) {
       console.warn('[webhook] nota fiscal chegou sem segredo configurado — recusado')

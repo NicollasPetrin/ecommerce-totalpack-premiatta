@@ -66,6 +66,11 @@ export const config = {
      para o teste conseguir apontar tudo para um servidor falso. */
   emailBaseUrl: (process.env.EMAIL_BASE_URL ?? '').trim().replace(/\/+$/, ''),
 
+  /* Chave do cofre dos segredos guardados no banco. Vazio = derivada do
+     JWT_SECRET, que ja e obrigatorio — uma variavel a menos para alguem
+     esquecer de definir e a loja rodar sem cifrar sem ninguem notar. */
+  encryptionKey: (process.env.ENCRYPTION_KEY ?? '').trim(),
+
   /* ---- Nota fiscal ----
      Vazio = a loja nao emite nota daqui; e o comportamento antigo. A chave
      mora no painel, como as outras, pelo mesmo motivo. */
