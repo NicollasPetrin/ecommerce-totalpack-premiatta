@@ -56,9 +56,13 @@ async function remetente() {
 async function itensParaEnvio(orderId) {
   const itens = await many(
     `SELECT i.name, i.qty, i.price, i.product_id,
-            p.weight_g, p.length_cm, p.width_cm, p.height_cm
+            COALESCE(NULLIF(v.weight_g, 0),  p.weight_g)  AS weight_g,
+            COALESCE(NULLIF(v.length_cm, 0), p.length_cm) AS length_cm,
+            COALESCE(NULLIF(v.width_cm, 0),  p.width_cm)  AS width_cm,
+            COALESCE(NULLIF(v.height_cm, 0), p.height_cm) AS height_cm
        FROM order_items i
        LEFT JOIN products p ON p.id = i.product_id
+       LEFT JOIN product_variants v ON v.id = i.variant_id
       WHERE i.order_id = $1`,
     [orderId],
   )

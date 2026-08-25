@@ -121,7 +121,12 @@ storeRoutes.post(
     const itens = await itensComMedidas(
       linhas
         .filter((l) => typeof l?.productId === 'string')
-        .map((l) => ({ productId: l.productId, qty: Math.max(1, Number(l.qty) || 1) })),
+        .map((l) => ({
+          productId: l.productId,
+          // A variação decide o peso quando a grade muda a quantidade.
+          variantId: typeof l.variantId === 'string' ? l.variantId : null,
+          qty: Math.max(1, Number(l.qty) || 1),
+        })),
     )
 
     const r = await quoteForCart({ cep: req.body?.cep, itens })

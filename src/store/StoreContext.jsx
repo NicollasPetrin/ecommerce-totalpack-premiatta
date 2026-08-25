@@ -295,7 +295,15 @@ export function StoreProvider({ children }) {
     api
       .post('/shipping/options', {
         cep: digitos,
-        items: cartLines.map((l) => ({ productId: l.product.id, qty: l.qty })),
+        /* A variação vai junto porque decide o peso: "1 pacote" e "5 pacotes"
+           são a mesma linha de catálogo com pesos diferentes. Sem ela, o
+           cliente veria o frete do menor e a etiqueta sairia pelo maior — a
+           diferença sairia do bolso da loja, em silêncio. */
+        items: cartLines.map((l) => ({
+          productId: l.product.id,
+          variantId: l.variant?.id ?? null,
+          qty: l.qty,
+        })),
       })
       .then((r) => {
         if (cancelado) return

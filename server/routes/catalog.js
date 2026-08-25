@@ -47,16 +47,20 @@ async function salvarVariacoes(client, productId, variantes) {
       await client.query(
         `UPDATE product_variants
             SET name=$1, options=$2::jsonb, sku=$3, gtin=$4, price=$5, promo=$6,
-                stock=$7, active=$8, position=$9
+                stock=$7, active=$8, position=$9,
+                weight_g=$12, length_cm=$13, width_cm=$14, height_cm=$15
           WHERE id=$10 AND product_id=$11`,
-        [v.name, opcoes, v.sku, v.gtin, v.price, v.promo, v.stock, v.active, i, v.id, productId],
+        [v.name, opcoes, v.sku, v.gtin, v.price, v.promo, v.stock, v.active, i, v.id, productId,
+         v.weightG, v.lengthCm, v.widthCm, v.heightCm],
       )
     } else {
       await client.query(
         `INSERT INTO product_variants
-           (product_id, name, options, sku, gtin, price, promo, stock, active, position)
-         VALUES ($1,$2,$3::jsonb,$4,$5,$6,$7,$8,$9,$10)`,
-        [productId, v.name, opcoes, v.sku, v.gtin, v.price, v.promo, v.stock, v.active, i],
+           (product_id, name, options, sku, gtin, price, promo, stock, active, position,
+            weight_g, length_cm, width_cm, height_cm)
+         VALUES ($1,$2,$3::jsonb,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        [productId, v.name, opcoes, v.sku, v.gtin, v.price, v.promo, v.stock, v.active, i,
+         v.weightG, v.lengthCm, v.widthCm, v.heightCm],
       )
     }
   }

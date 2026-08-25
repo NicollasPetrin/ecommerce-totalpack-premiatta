@@ -202,6 +202,13 @@ export const schemas = {
               promo: money.default(0),
               stock: z.coerce.number().int().min(0, 'Estoque inválido.'),
               active: z.boolean().default(true),
+              /* Zero = herda a medida do produto. É o caso comum, de grade que
+                 varia só em cor; preencher aqui é para quando a variação muda
+                 a quantidade e portanto o peso. */
+              weightG: z.coerce.number().int().min(0, 'Peso inválido.').default(0),
+              lengthCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
+              widthCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
+              heightCm: z.coerce.number().min(0, 'Medida inválida.').default(0),
             })
             .refine((v) => v.promo === 0 || v.promo < v.price, {
               message: 'A promoção deve ser menor que o preço.',

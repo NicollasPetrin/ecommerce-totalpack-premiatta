@@ -25,6 +25,11 @@ export const variant = (r) => ({
   promo: Number(r.promo),
   stock: r.stock,
   active: r.active,
+  // Zero significa "usa a do produto".
+  weightG: Number(r.weight_g ?? 0),
+  lengthCm: Number(r.length_cm ?? 0),
+  widthCm: Number(r.width_cm ?? 0),
+  heightCm: Number(r.height_cm ?? 0),
 })
 
 export const product = (r) => ({

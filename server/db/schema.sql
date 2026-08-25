@@ -642,3 +642,18 @@ CREATE TRIGGER invoices_touch BEFORE UPDATE ON invoices
 -- notificação forjada marcaria nota como autorizada e faria a loja despachar
 -- com chave inventada, então sem segredo configurado a rota recusa tudo.
 ALTER TABLE settings ADD COLUMN IF NOT EXISTS fiscal_webhook_secret TEXT NOT NULL DEFAULT '';
+
+-- -----------------------------------------------------------------------------
+-- Peso e medida por variação
+--
+-- Até aqui a medida vivia só no produto, o que funciona enquanto as variações
+-- diferem em cor. Não funciona quando diferem em quantidade: "1 pacote" pesa
+-- 600 g e "5 pacotes" pesam 3 kg, e cotar os dois pelo mesmo número erra o
+-- frete em cinco vezes — a loja paga a diferença, ou a transportadora cobra
+-- depois. Vazio (zero) mantém o comportamento antigo: herda do produto.
+-- -----------------------------------------------------------------------------
+
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS weight_g  INTEGER      NOT NULL DEFAULT 0;
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS length_cm NUMERIC(6,1) NOT NULL DEFAULT 0;
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS width_cm  NUMERIC(6,1) NOT NULL DEFAULT 0;
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS height_cm NUMERIC(6,1) NOT NULL DEFAULT 0;

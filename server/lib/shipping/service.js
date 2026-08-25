@@ -75,21 +75,39 @@ export async function itensComMedidas(linhas) {
   )
   const porId = new Map(produtos.map((p) => [p.id, p]))
 
+  /* Medida da variação, quando houver. "1 pacote" e "5 pacotes" são a mesma
+     linha de catálogo e pesos diferentes; cotar os dois pelo peso do produto
+     erraria o frete em cinco vezes. Zero na variação significa "usa a do
+     produto", que é o caso da grade que varia só em cor. */
+  const ids = linhas.map((l) => l.variantId).filter(Boolean)
+  const vars = ids.length
+    ? await many(
+        `SELECT id, price, promo, weight_g, length_cm, width_cm, height_cm
+           FROM product_variants WHERE id = ANY($1::uuid[]) AND active`,
+        [ids],
+      )
+    : []
+  const porVar = new Map(vars.map((v) => [v.id, v]))
+
   return linhas
     .map((l) => {
       const p = porId.get(l.productId)
       if (!p) return null
+      const v = l.variantId ? porVar.get(l.variantId) : null
+      const fonte = v ?? p
+      // Só cai no produto quando a variação não tem medida própria.
+      const medida = (campo) => Number(v?.[campo] ?? 0) || Number(p[campo] ?? 0)
       return {
         id: p.id,
         name: p.name,
         qty: l.qty,
-        price: Number(p.promo) > 0 && Number(p.promo) < Number(p.price)
-          ? Number(p.promo)
-          : Number(p.price),
-        weightG: Number(p.weight_g ?? 0),
-        lengthCm: Number(p.length_cm ?? 0),
-        widthCm: Number(p.width_cm ?? 0),
-        heightCm: Number(p.height_cm ?? 0),
+        price: Number(fonte.promo) > 0 && Number(fonte.promo) < Number(fonte.price)
+          ? Number(fonte.promo)
+          : Number(fonte.price),
+        weightG: medida('weight_g'),
+        lengthCm: medida('length_cm'),
+        widthCm: medida('width_cm'),
+        heightCm: medida('height_cm'),
       }
     })
     .filter(Boolean)
@@ -177,9 +195,13 @@ export async function autoBuyLabel(orderId) {
   try {
     const itens = await many(
       `SELECT i.name, i.qty, i.price, i.product_id,
-              p.weight_g, p.length_cm, p.width_cm, p.height_cm
+              COALESCE(NULLIF(v.weight_g, 0),  p.weight_g)  AS weight_g,
+              COALESCE(NULLIF(v.length_cm, 0), p.length_cm) AS length_cm,
+              COALESCE(NULLIF(v.width_cm, 0),  p.width_cm)  AS width_cm,
+              COALESCE(NULLIF(v.height_cm, 0), p.height_cm) AS height_cm
          FROM order_items i
          LEFT JOIN products p ON p.id = i.product_id
+         LEFT JOIN product_variants v ON v.id = i.variant_id
         WHERE i.order_id = $1`,
       [orderId],
     )
