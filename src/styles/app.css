@@ -2799,3 +2799,30 @@
 }
 
 .freteopts__mais:hover { text-decoration: underline; }
+
+/* Resultado da transportadora: o mais barato em destaque, a alternativa mais
+   rápida abaixo e discreta. Duas linhas em vez da dúzia de serviços que a
+   transportadora devolve — aqui não se escolhe nada, a escolha é no checkout,
+   e a lista inteira só empurraria o botão de comprar para fora da tela. */
+.shipcalc__alt {
+  margin-top: 4px;
+  /* Alinha com o texto da linha de cima, que tem ícone de 16px + 8px de gap. */
+  padding-left: 24px;
+  color: var(--label-3);
+}
+
+.shipcalc__alt strong { color: var(--label-2); font-weight: 600; }
+
+.shipcalc__nota {
+  margin-top: 8px;
+  padding-left: 24px;
+  font-size: var(--fs-caption);
+  color: var(--label-3);
+  line-height: 1.4;
+}
+
+@media (max-width: 420px) {
+  /* Em tela estreita o recuo custa mais que alinha. */
+  .shipcalc__alt,
+  .shipcalc__nota { padding-left: 0; }
+}

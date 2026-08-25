@@ -5,7 +5,7 @@ import Logo from './Logo'
 import Icon from './Icon'
 
 export default function Header() {
-  const { categories, cartCount, setCartOpen, settings, theme, setTheme, currentCustomer } =
+  const { categories, products, cartCount, setCartOpen, settings, theme, setTheme, currentCustomer } =
     useStore()
   const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -54,7 +54,10 @@ export default function Header() {
   const themeTitle =
     theme === 'system' ? 'Tema: automático' : theme === 'light' ? 'Tema: claro' : 'Tema: escuro'
 
-  const topCats = [...categories].sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
+  /* Só categoria com produto: o menu não deve levar a uma tela vazia. */
+  const topCats = [...categories]
+    .filter((c) => products.some((p) => p.active && p.categoryId === c.id))
+    .sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
 
   return (
     <header className={`nav${scrolled ? ' is-scrolled' : ''}`}>

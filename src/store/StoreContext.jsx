@@ -275,7 +275,9 @@ export function StoreProvider({ children }) {
      sem precisar abrir o log do servidor. */
   const [freteCausa, setFreteCausa] = useState('')
   const [freteCarregando, setFreteCarregando] = useState(false)
-  const [freteIntegrado, setFreteIntegrado] = useState(false)
+  /* Vem das configuracoes, nao da ultima cotacao: telas sem sacola tambem
+     precisam saber quem cobra o frete. */
+  const freteIntegrado = settings?.freteIntegrado ?? false
 
   /* Recotar a cada mudança de sacola ou CEP. A escolha anterior é descartada:
      manter um preço antigo depois de mexer nos itens cobraria errado. */
@@ -307,7 +309,6 @@ export function StoreProvider({ children }) {
       })
       .then((r) => {
         if (cancelado) return
-        setFreteIntegrado(r.provider !== 'manual')
         if (r.provider === 'manual') {
           setFreteOpcoes(null)
           setFreteErro('')

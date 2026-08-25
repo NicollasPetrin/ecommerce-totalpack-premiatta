@@ -1,3 +1,4 @@
+import { config } from '../config.js'
 /**
  * Tradução entre o banco (snake_case) e o front (camelCase).
  *
@@ -196,6 +197,11 @@ export const invoice = (r) =>
     : null
 
 export const settings = (r) => ({
+  /* Se a loja cobra frete por transportadora ou pela tabela de faixas de CEP.
+     Sai daqui, e nao de uma cotacao, porque telas sem sacola precisam saber —
+     a pagina do produto anunciava "frete gratis acima de X" mesmo com a
+     transportadora ligada, onde frete gratis por valor nao existe. */
+  freteIntegrado: config.shippingProvider !== 'manual',
   storeName: r.store_name,
   tagline: r.tagline,
   email: r.email,

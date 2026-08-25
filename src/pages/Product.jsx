@@ -11,7 +11,10 @@ import Icon from '../components/Icon'
 export default function Product() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { productById, categoryById, products, addToCart, setCartOpen, settings } = useStore()
+  const {
+    productById, categoryById, products, addToCart, setCartOpen, settings,
+    freteIntegrado,
+  } = useStore()
   const [qty, setQty] = useState(1)
   /* Escolha por eixo: { Cor: 'Azul', Tamanho: 'P' }. Null enquanto o cliente
      não mexe, para o padrão poder ser recalculado se o produto mudar. */
@@ -211,14 +214,31 @@ export default function Product() {
           )}
 
           <div className="pdp__ship">
-            <ShippingCalculator />
+            {/* A variação vai junto porque decide o peso — "1 pacote" e
+                "5 pacotes" custam fretes diferentes, e mostrar o do menor
+                seria prometer o que o checkout não cobra. */}
+            <ShippingCalculator
+              items={[
+                {
+                  productId: product.id,
+                  variantId: escolhida?.id ?? null,
+                  qty,
+                },
+              ]}
+            />
           </div>
 
           <ul className="pdp__perks">
-            <li>
-              <Icon name="truck" size={18} />
-              Frete grátis acima de {money(settings.freeShippingFrom)}
-            </li>
+            {/* Com transportadora integrada não existe frete grátis por valor:
+                quem cobra é ela, por peso e distância. Anunciar o contrário
+                aqui seria a mesma promessa quebrada de antes, num lugar em que
+                o cliente confia ainda mais — logo abaixo do preço. */}
+            {!freteIntegrado && settings.freeShippingFrom > 0 && (
+              <li>
+                <Icon name="truck" size={18} />
+                Frete grátis acima de {money(settings.freeShippingFrom)}
+              </li>
+            )}
             <li>
               <Icon name="box" size={18} />
               Entrega para todo o Brasil

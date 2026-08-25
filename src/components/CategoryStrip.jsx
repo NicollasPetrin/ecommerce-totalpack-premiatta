@@ -19,10 +19,13 @@ export default function CategoryStrip() {
   const noCatalogo = pathname === '/catalogo'
   const atual = noCatalogo ? params.get('cat') : null
 
-  const ordenadas = [...categories].sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
-  if (!ordenadas.length) return null
-
   const live = products.filter((p) => p.active)
+
+  /* Categoria sem produto sai da barra: o atalho levaria a uma tela vazia. */
+  const ordenadas = [...categories]
+    .filter((c) => live.some((p) => p.categoryId === c.id))
+    .sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
+  if (!ordenadas.length) return null
 
   return (
     <nav className="catstrip" aria-label="Atalhos de categoria">
