@@ -53,6 +53,24 @@ app.use(readSession)
    perder confirmação de pagamento. Aquela rota se defende pela assinatura. */
 app.use('/api', limiteGeral)
 
+/**
+ * Resposta de API não pode envelhecer no navegador.
+ *
+ * Sem `Cache-Control`, o navegador decide sozinho por quanto tempo guardar
+ * (cache heurístico) — e foi o que aconteceu depois de trocar o catálogo: o
+ * site no ar já tinha os produtos novos, e a tela continuava mostrando os
+ * antigos, sem nada errado no servidor.
+ *
+ * `no-cache` não proíbe guardar: obriga a revalidar. Com o ETag que o Express
+ * já emite, um catálogo que não mudou volta como 304 sem corpo — barato como
+ * cache, e nunca velho. `private` mantém a resposta fora de cache
+ * compartilhado, o que importa para as rotas do painel e do cliente logado.
+ */
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'private, no-cache')
+  next()
+})
+
 app.get('/api/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1')
