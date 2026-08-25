@@ -98,12 +98,30 @@ app.use('/api', (_req, _res, next) => next(notFound('Rota não encontrada.')))
 const distDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist')
 
 if (existsSync(distDir)) {
-  // Os arquivos com hash no nome nunca mudam de conteúdo; o index.html sim.
+  /**
+   * Cache dos arquivos servidos.
+   *
+   * O ano de validade só vale para o que o Vite versiona pelo nome —
+   * `assets/index-a1b2c3.js` e afins. Trocar o conteúdo troca o nome, então o
+   * arquivo antigo nunca precisa ser buscado de novo.
+   *
+   * O que vem de `public/` mantém o nome para sempre: `logo.png` é `logo.png`
+   * antes e depois de trocar a arte. Dar um ano a esses arquivos os congela —
+   * foi o que aconteceu com a logo, que ficou presa no Cloudflare com o
+   * desenho antigo enquanto o servidor já tinha o novo. Revalidar custa um 304
+   * e devolve a possibilidade de atualizar.
+   */
+  const versionado = /[.-][0-9a-zA-Z_-]{8,}\.\w+$/
+
   app.use(
     express.static(distDir, {
-      maxAge: '1y',
       setHeaders: (res, filePath) => {
-        if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache')
+        const nome = filePath.replace(/\\/g, '/')
+        const imutavel = nome.includes('/assets/') && versionado.test(nome)
+        res.setHeader(
+          'Cache-Control',
+          imutavel ? 'public, max-age=31536000, immutable' : 'public, max-age=0, must-revalidate',
+        )
       },
     }),
   )

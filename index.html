@@ -9,8 +9,23 @@
       name="description"
       content="TotalPack — papel A4, colorset, cadernos e todo o material escolar com entrega rápida."
     />
-    <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/logo.png" />
+    <!--
+      Dois icones, porque os dois tamanhos pedem desenhos diferentes.
+
+      Na aba o navegador desenha com 16 px, e a arte completa — circulo,
+      sacola, presente, caixa e duas palavras — vira uma mancha verde e
+      amarela sem forma. O favicon e a marca reduzida ao que sobrevive nesse
+      tamanho: circulo verde, anel amarelo e as iniciais.
+
+      O icone de atalho e desenhado com 180 px, onde o detalhe aparece, entao
+      ali vai a arte completa.
+
+      O ?v= fura a copia que ficou presa no Cloudflare quando os arquivos de
+      public/ ainda eram servidos com um ano de validade. Daqui para frente
+      eles revalidam, e trocar a arte dispensa mexer neste numero.
+    -->
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon.png?v=2" />
+    <link rel="apple-touch-icon" href="/logo.png?v=2" />
     <title>TotalPack — Material escolar</title>
   </head>
   <body>
