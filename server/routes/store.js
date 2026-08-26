@@ -13,6 +13,7 @@ import { esquecerToken } from '../lib/shipping/credenciais.js'
 import { esquecerChaveEmail } from '../lib/email/service.js'
 import { esquecerChaveFiscal } from '../lib/fiscal/service.js'
 import { guardar } from '../lib/cofre.js'
+import { enderecoDoCep } from '../lib/cep.js'
 import * as s from '../lib/serialize.js'
 
 export const storeRoutes = Router()
@@ -99,6 +100,27 @@ storeRoutes.get(
     res.json({
       zone: { id: zone.id, name: zone.name, fee: Number(zone.fee), days: zone.days },
     })
+  }),
+)
+
+/**
+ * Endereço a partir do CEP, para o checkout se preencher sozinho.
+ *
+ * Rota pública, como precisa ser: quem está comprando ainda não tem conta. O
+ * teto de chamadas externas vale aqui porque cada consulta que escapa do
+ * cache sai para um serviço de terceiro — sem ele, um laço no navegador de
+ * alguém queimaria a cota para todo mundo.
+ *
+ * CEP não encontrado responde 200 com `{ endereco: null }`, e não 404: para
+ * quem está digitando, "ainda não achei" é estado normal do formulário, não
+ * erro. Um 404 acenderia o console do navegador a cada tecla.
+ */
+storeRoutes.get(
+  '/cep/:cep',
+  limiteExterno,
+  wrap(async (req, res) => {
+    const endereco = await enderecoDoCep(req.params.cep)
+    res.json({ endereco })
   }),
 )
 

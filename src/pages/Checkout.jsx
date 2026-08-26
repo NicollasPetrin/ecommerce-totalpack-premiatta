@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/StoreContext'
+import { api } from '../lib/api'
 import { PAYMENT_LABEL } from '../store/StoreContext'
 import { maskCep, maskDoc, maskPhone, money } from '../lib/format'
 import { formatCep, zoneDeadline } from '../lib/shipping'
@@ -84,7 +85,10 @@ export default function Checkout() {
 
   /** Preenche o formulário com um endereço salvo e recalcula o frete. */
   const useSavedAddress = (a) => {
-    setCep(a.cep.replace(/\D/g, ''))
+    const digitos = a.cep.replace(/\D/g, '')
+    setCep(digitos)
+    // Endereço escolhido é endereço decidido: a busca não deve reescrevê-lo.
+    cepConsultado.current = digitos
     setForm((f) => ({
       ...f,
       addressId: a.id,
@@ -119,6 +123,16 @@ export default function Checkout() {
   }
   const [errors, setErrors] = useState({})
   const [sending, setSending] = useState(false)
+  const [buscandoCep, setBuscandoCep] = useState(false)
+  /* Qual CEP a busca automática já resolveu. Nasce com o do endereço padrão
+     da conta: aquele endereço veio do cadastro do cliente, que pode ter
+     corrigido a rua à mão, e sobrescrevê-lo com a versão dos Correios seria
+     desfazer a correção. */
+  const cepConsultado = useRef((defaultAddress?.cep ?? '').replace(/\D/g, ''))
+  /* Qual CEP tem consulta a caminho. Separado do de cima porque "pedido" e
+     "preenchido" são momentos diferentes — confundir os dois foi o que
+     quebrou a primeira versão. */
+  const cepEmBusca = useRef('')
   const [verTodas, setVerTodas] = useState(false)
 
   /**
@@ -172,6 +186,81 @@ export default function Checkout() {
 
   const ship = shipping ?? 0
   const grand = subtotal + ship
+
+  /**
+   * Preenchimento do endereço a partir do CEP.
+   *
+   * Só dispara quando o CEP muda para outro completo e diferente do que já foi
+   * consultado — sem isso, cada tecla depois do oitavo dígito viraria uma
+   * consulta nova, e mexer no número da casa refaria a busca.
+   *
+   * Sobrescreve rua, bairro, cidade e UF de propósito: se o CEP mudou, o que
+   * estava ali é de outro endereço. Número e complemento nunca são tocados —
+   * nenhum CEP sabe deles, e apagar o que a pessoa digitou seria hostil.
+   */
+  useEffect(() => {
+    const digitos = form.cep.replace(/\D/g, '')
+    if (digitos.length !== 8) return
+    // Já preenchido para este CEP, ou já pedido e a caminho.
+    if (digitos === cepConsultado.current || digitos === cepEmBusca.current) return
+
+    cepEmBusca.current = digitos
+    setBuscandoCep(true)
+
+    api
+      .get(`/cep/${digitos}`)
+      /* Sem cancelamento na limpeza, e isso é o ponto.
+       *
+       * O React chama o efeito duas vezes no desenvolvimento, de propósito,
+       * para expor efeito que não tolera ser refeito. Com cancelamento, a
+       * primeira ida era abortada pela limpeza e a segunda desistia por ver o
+       * CEP já marcado: nada preenchia, e a requisição aparecia como 200 no
+       * painel de rede — o pior tipo de erro para achar.
+       *
+       * Em vez de cancelar, a resposta é aceita só se ainda for a atual. Isso
+       * resolve os dois casos de uma vez: a repetição do desenvolvimento e o
+       * cliente que troca o CEP antes de a resposta anterior chegar. */
+      .then(({ endereco }) => {
+        if (cepEmBusca.current !== digitos || !endereco) return
+        cepConsultado.current = digitos
+
+        setForm((f) => ({
+          ...f,
+          // Cidade e UF vêm sempre; rua e bairro faltam em CEP de cidade
+          // inteira, comum em município pequeno. Nesse caso o que já estava
+          // escrito é melhor que vazio.
+          address: endereco.rua || f.address,
+          district: endereco.bairro || f.district,
+          city: endereco.cidade,
+          state: endereco.uf,
+        }))
+        setErrors((x) => ({
+          ...x, address: undefined, district: undefined, city: undefined, state: undefined,
+        }))
+
+        /* O cursor vai para o número, que é o que falta e o único que a
+           consulta não tem como saber. Só quando está vazio: quem voltou para
+           corrigir o CEP não quer perder o lugar onde estava. */
+        if (endereco.rua) {
+          /* setTimeout, e não requestAnimationFrame: rAF não dispara em aba
+             que não está desenhando, e o preenchimento pode muito bem
+             terminar com a aba em segundo plano. */
+          setTimeout(() => {
+            const campo = document.getElementById('ck-number')
+            if (campo && !campo.value) campo.focus()
+          }, 0)
+        }
+      })
+      /* Falha não vira erro na tela: o formulário continua preenchível à mão,
+         como era antes de existir esta busca. Mas o CEP é liberado, para uma
+         nova tentativa ser possível se a pessoa corrigir e voltar. */
+      .catch(() => {
+        if (cepEmBusca.current === digitos) cepEmBusca.current = ''
+      })
+      .finally(() => {
+        if (cepEmBusca.current === digitos || !cepEmBusca.current) setBuscandoCep(false)
+      })
+  }, [form.cep])
 
   const set = (key) => (e) => {
     let v = e.target.value
@@ -523,6 +612,8 @@ export default function Checkout() {
                 />
                 {errors.cep ? (
                   <span className="err">{errors.cep}</span>
+                ) : buscandoCep ? (
+                  <span className="hint">Buscando endereço…</span>
                 ) : zone ? (
                   <span className="hint hint--ok">
                     {zone.name} · chega em {zoneDeadline(zone)}
