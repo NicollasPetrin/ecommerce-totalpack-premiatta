@@ -17,6 +17,10 @@ export default function AdminSettings() {
   const [pwError, setPwError] = useState('')
   const [teste, setTeste] = useState(null)
   const [testando, setTestando] = useState(false)
+  // Estado próprio: os dois testes podem rodar na mesma visita à tela, e um
+  // resultado sobrescrevendo o outro esconderia justamente o que se procura.
+  const [testeNf, setTesteNf] = useState(null)
+  const [testandoNf, setTestandoNf] = useState(false)
 
   /* O que ainda falta para a transportadora aceitar o endereço de origem. */
   const faltamRemetente = [
@@ -215,6 +219,87 @@ export default function AdminSettings() {
                 cadastro antes de valer de verdade. Lembre de desligar depois.
               </span>
             </label>
+
+            {/* Teste da chave fiscal. Existe pelo mesmo motivo do teste da
+                transportadora, e para evitar a mesma tarde perdida: lá, uma
+                chave errada só aparecia como "não gera etiqueta" horas depois.
+                Aqui apareceria pior — como nota que não sai de um pedido já
+                pago. Confere a chave sem emitir nada. */}
+            <div className="testeconn">
+              <button
+                type="button"
+                className="btn btn--outline btn--sm"
+                disabled={testandoNf}
+                onClick={async () => {
+                  setTestandoNf(true)
+                  setTesteNf(null)
+                  try {
+                    setTesteNf(await api.post('/fiscal/test'))
+                  } catch (err) {
+                    setTesteNf({ ok: false, conclusao: err.message })
+                  } finally {
+                    setTestandoNf(false)
+                  }
+                }}
+              >
+                <Icon name="refresh" size={15} />
+                {testandoNf ? 'Testando…' : 'Testar chave do emissor'}
+              </button>
+
+              {testeNf && (
+                <div className={`testeconn__res${testeNf.ok ? ' is-ok' : ''}`}>
+                  <strong>
+                    <Icon name={testeNf.ok ? 'checkCircle' : 'alert'} size={15} />{' '}
+                    {testeNf.conclusao}
+                  </strong>
+
+                  {testeNf.avisos?.length > 0 && (
+                    <ul className="testeconn__avisos">
+                      {testeNf.avisos.map((a) => (
+                        <li key={a}>{a}</li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {testeNf.configuracao && (
+                    <dl className="testeconn__cfg">
+                      <div><dt>Emissor</dt><dd>{testeNf.configuracao.emissor}</dd></div>
+                      <div><dt>Ambiente</dt><dd>{testeNf.configuracao.ambiente}</dd></div>
+                      <div>
+                        <dt>Chave</dt>
+                        <dd>
+                          {testeNf.configuracao.chavePresente
+                            ? `${testeNf.configuracao.chaveTamanho} caracteres · ${testeNf.configuracao.origemDaChave}`
+                            : 'ausente'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Segredo do webhook</dt>
+                        <dd>{testeNf.configuracao.segredoDoWebhook}</dd>
+                      </div>
+                      <div>
+                        <dt>Emissão automática</dt>
+                        <dd>{testeNf.configuracao.emissaoAutomatica ? 'ligada' : 'desligada'}</dd>
+                      </div>
+                      <div>
+                        <dt>CNPJ do remetente</dt>
+                        <dd>{testeNf.configuracao.remetenteDoc}</dd>
+                      </div>
+                      <div>
+                        <dt>Produtos sem NCM</dt>
+                        <dd>{testeNf.configuracao.produtosSemNcm}</dd>
+                      </div>
+                    </dl>
+                  )}
+
+                  {testeNf.corpo && (
+                    <pre className="testeconn__corpo">
+                      {JSON.stringify(testeNf.corpo, null, 2).slice(0, 800)}
+                    </pre>
+                  )}
+                </div>
+              )}
+            </div>
 
             <hr className="rule" />
 

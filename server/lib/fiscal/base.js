@@ -124,6 +124,31 @@ export const baseErp = {
   label: 'Base ERP (Asaas)',
 
   /**
+   * Confere se a chave é aceita, sem emitir nada.
+   *
+   * Lista clientes com limite 1: é a chamada mais barata que o Base tem e que
+   * ainda exige autenticação. Emitir uma nota de teste seria o único jeito de
+   * provar o caminho inteiro, mas nota emitida em produção é documento fiscal
+   * de verdade — não se testa com isso.
+   */
+  async testar({ chave, sandbox }) {
+    const r = await fetch(`${base(sandbox)}/api/v1/customers?limit=1`, {
+      headers: { access_token: chave, accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    })
+
+    const texto = await r.text()
+    let corpo
+    try {
+      corpo = texto ? JSON.parse(texto) : {}
+    } catch {
+      corpo = { raw: texto.slice(0, 300) }
+    }
+
+    return { ok: r.ok, status: r.status, corpo }
+  },
+
+  /**
    * Cadastra o comprador. `externalReference` carrega o documento para o Base
    * reconhecer quem já existe — sem isso, cada compra criaria um cadastro novo.
    */

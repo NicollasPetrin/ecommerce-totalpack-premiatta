@@ -8,7 +8,7 @@ import { config } from '../config.js'
 import { currentShippingProvider } from '../lib/shipping/index.js'
 import { buyLabel, createShipment, quoteForCart, syncShipment } from '../lib/shipping/service.js'
 import { resumoDoToken } from '../lib/shipping/credenciais.js'
-import { emissaoAtiva, emitirNota, notaDoPedido } from '../lib/fiscal/service.js'
+import { emissaoAtiva, emitirNota, notaDoPedido, testarFiscal } from '../lib/fiscal/service.js'
 import * as s from '../lib/serialize.js'
 
 export const shipmentRoutes = Router()
@@ -360,5 +360,19 @@ shipmentRoutes.post(
     // 200 mesmo na recusa: a falha é do cadastro, não da requisição, e o
     // motivo é o que a tela precisa mostrar.
     res.json({ ok: resultado.feito, motivo: resultado.motivo ?? '', invoice: s.invoice(nota) })
+  }),
+)
+
+/**
+ * Diagnóstico da configuração fiscal.
+ *
+ * Mesmo lugar do teste da transportadora porque é o mesmo momento do uso:
+ * quem acabou de colar uma chave quer saber, ali, se ela vale.
+ */
+shipmentRoutes.post(
+  '/fiscal/test',
+  limiteExterno,
+  wrap(async (_req, res) => {
+    res.json(await testarFiscal())
   }),
 )

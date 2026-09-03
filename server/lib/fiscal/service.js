@@ -343,3 +343,105 @@ export async function aplicarEventoFiscal({ providerId = 'base', body }) {
     virouAutorizada: registro.status !== 'autorizada' && atualizado.status === 'autorizada',
   }
 }
+
+/**
+ * Confere a configuração fiscal inteira e fala com o emissor.
+ *
+ * Existe pelo mesmo motivo do teste da transportadora, e para não repetir a
+ * mesma tarde: lá, a chave errada só se manifestava como "não gera etiqueta",
+ * horas depois, num pedido pago. Aqui a falha apareceria pior ainda — como
+ * uma nota que não sai depois de o cliente já ter pagado.
+ *
+ * Nunca devolve a chave. Só o suficiente para saber se ela existe, de onde
+ * veio e se o emissor a aceita.
+ */
+export async function testarFiscal() {
+  const chave = await chaveAtual()
+  const cfg = await one(`SELECT * FROM settings WHERE id = true`).catch(() => null)
+  const provider = getFiscalProvider('base')
+  const sandbox = Boolean(cfg?.fiscal_sandbox)
+
+  const pendencias = await many(
+    `SELECT name FROM products
+      WHERE active AND (ncm = '' OR unit_trib = '')
+      ORDER BY name`,
+  ).catch(() => [])
+
+  const configuracao = {
+    emissor: provider.label,
+    ambiente: sandbox ? 'homologação (nota sem valor fiscal)' : 'produção',
+    chavePresente: Boolean(chave),
+    chaveTamanho: chave.length,
+    origemDaChave: limpar(abrir(cfg?.fiscal_key)) ? 'painel' : 'variável de ambiente',
+    segredoDoWebhook: cfg?.fiscal_webhook_secret ? 'configurado' : '(vazio — o webhook recusa tudo)',
+    emissaoAutomatica: cfg?.auto_invoice !== false,
+    contaDoEmissor: cfg?.fiscal_bank_id || '(vazio — a nota sai sem pagamento anexado)',
+    remetenteDoc: cfg?.sender_doc || '(vazio)',
+    produtosSemNcm: pendencias.length,
+  }
+
+  if (!chave) {
+    return {
+      ok: false,
+      configuracao,
+      conclusao: 'Nenhuma chave do emissor gravada. Cole a chave do Base ERP e salve.',
+    }
+  }
+
+  let resposta
+  try {
+    resposta = await provider.testar({ chave, sandbox })
+  } catch (err) {
+    return {
+      ok: false,
+      configuracao,
+      conclusao: `Não foi possível falar com o emissor: ${err.message}`,
+    }
+  }
+
+  if (!resposta.ok) {
+    /* O número do erro sozinho não ajuda ninguém; o que ajuda é o que fazer.
+       O Base devolve 403 tanto para chave inválida quanto para chave sem
+       permissão — verificado colando uma chave inventada, que veio 403 e não
+       401. Por isso a mensagem cobre os dois casos em vez de afirmar o que
+       não dá para distinguir daqui. */
+    const dica =
+      resposta.status === 401 || resposta.status === 403
+        ? 'Chave recusada pelo emissor. Confira se copiou ela inteira, se é do ' +
+          'ambiente marcado acima, e se tem permissão para notas no painel do Base.'
+        : resposta.status === 404
+          ? 'Endereço não encontrado no emissor. Se a conta é nova, confirme se ' +
+            'o acesso à API já foi liberada.'
+          : `O emissor respondeu HTTP ${resposta.status}. O retorno cru está abaixo.`
+
+    return { ok: false, configuracao, conclusao: dica, corpo: resposta.corpo }
+  }
+
+  const avisos = []
+  if (!cfg?.fiscal_webhook_secret) {
+    avisos.push(
+      'Falta o segredo do webhook. Sem ele a chave da nota nunca chega, e a ' +
+        'etiqueta fica esperando para sempre.',
+    )
+  }
+  if (pendencias.length) {
+    const nomes = pendencias.slice(0, 3).map((p) => p.name).join(', ')
+    avisos.push(
+      `${pendencias.length} produto(s) sem NCM ou unidade fiscal: ${nomes}` +
+        `${pendencias.length > 3 ? ` e mais ${pendencias.length - 3}` : ''}. ` +
+        'A nota desses pedidos vai ser recusada.',
+    )
+  }
+  if (!sandbox) {
+    avisos.push('Em produção: as notas emitidas valem como documento fiscal.')
+  }
+
+  return {
+    ok: true,
+    configuracao,
+    conclusao: avisos.length
+      ? 'A chave funciona, mas ainda falta coisa:'
+      : 'Tudo certo. A chave funciona e a configuração está completa.',
+    avisos,
+  }
+}

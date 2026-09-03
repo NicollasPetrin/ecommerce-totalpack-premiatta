@@ -1301,3 +1301,17 @@
 .ship__nf .hint { overflow-wrap: anywhere; }
 
 .ship__nf .btn { margin-top: 8px; }
+
+/* Pendências que o teste da chave fiscal encontrou: a chave vale, mas ainda
+   falta algo para a nota sair. Ficam entre a conclusão e a tabela de
+   configuração, que é a ordem em que se lê. */
+.testeconn__avisos {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: var(--fs-footnote);
+  line-height: 1.45;
+  color: var(--orange);
+}
