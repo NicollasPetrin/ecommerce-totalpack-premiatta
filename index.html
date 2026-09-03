@@ -1,5 +1,17 @@
 <!doctype html>
-<html lang="pt-BR">
+<!--
+  data-theme="light" já no HTML, e não deixado para o React.
+
+  O CSS pinta escuro quando o sistema está em escuro e o atributo ainda não
+  existe. Sem isto, quem usa o celular no escuro veria a loja abrir preta e
+  virar clara um instante depois, a cada visita.
+
+  A alternativa comum — um script inline lendo o localStorage antes da
+  primeira pintura — exigiria 'unsafe-inline' no script-src, e afrouxar a
+  política inteira por causa de um piscar não vale a troca. Quem escolheu
+  outro tema tem a escolha aplicada pelo React logo em seguida.
+-->
+<html lang="pt-BR" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />

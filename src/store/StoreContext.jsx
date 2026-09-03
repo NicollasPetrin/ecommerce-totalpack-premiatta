@@ -109,17 +109,40 @@ export function StoreProvider({ children }) {
   const [cep, setCep] = useState(() => db.read(db.KEYS.cep, ''))
   const [cartOpen, setCartOpen] = useState(false)
   const [toasts, setToasts] = useState([])
-  const [theme, setTheme] = useState(() => db.read(db.KEYS.theme, 'system'))
+  /* Claro é o padrão da loja, e não o tema do aparelho. Quem nunca tocou no
+     botão vê a loja clara mesmo com o celular no escuro. */
+  const [theme, setTheme] = useState(() => db.read(db.KEYS.theme, 'light'))
 
   useEffect(() => void db.write(db.KEYS.cart, cart), [cart])
   useEffect(() => void db.write(db.KEYS.cep, cep), [cep])
 
+  /* Só aplica no documento; gravar é trabalho de quem troca de verdade.
+   *
+   * Gravar aqui apagaria a diferença entre "escolheu um tema" e "nunca tocou
+   * no botão": bastava abrir a loja uma vez para o padrão ficar carimbado no
+   * navegador. Era o que estava acontecendo — todo visitante tinha 'system'
+   * gravado sem nunca ter escolhido, e mudar o padrão não alcançaria nenhum
+   * deles. */
   useEffect(() => {
-    db.write(db.KEYS.theme, theme)
     const root = document.documentElement
     if (theme === 'system') root.removeAttribute('data-theme')
     else root.setAttribute('data-theme', theme)
+
+    /* A cor da barra do navegador segue o tema da loja. As duas <meta> do
+       HTML seguem o sistema, que agora pode discordar do que está na tela. */
+    const escuro =
+      theme === 'dark' ||
+      (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches)
+    document
+      .querySelectorAll('meta[name="theme-color"]')
+      .forEach((m) => m.setAttribute('content', escuro ? '#100d0b' : '#fffdf8'))
   }, [theme])
+
+  /** Troca o tema e guarda a escolha. Só isto grava. */
+  const escolherTema = useCallback((valor) => {
+    setTheme(valor)
+    db.write(db.KEYS.theme, valor)
+  }, [])
 
   /* ---- Notificações ---- */
   const timers = useRef(new Map())
@@ -806,7 +829,7 @@ export function StoreProvider({ children }) {
       toast,
       toasts,
       theme,
-      setTheme,
+      setTheme: escolherTema,
     }),
     [
       ready, bootError, products, categories, orders, customers, settings, zones,
@@ -821,7 +844,7 @@ export function StoreProvider({ children }) {
       placeOrder, updateOrderStatus, deleteOrder, rechargeOrder, syncOrderPayment,
       isAdmin, login, logout, changePassword, saveProduct, deleteProduct,
       toggleProduct, saveCategory, deleteCategory, saveSettings, loadPublic,
-      toast, toasts, theme,
+      toast, toasts, theme, escolherTema,
     ],
   )
 
