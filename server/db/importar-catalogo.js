@@ -67,9 +67,41 @@ async function baixarFoto(url) {
   }
 }
 
+/**
+ * Preenche NCM e unidade fiscal onde ainda estiverem vazios.
+ *
+ * Separado do import inteiro porque é o único campo que pode chegar depois: o
+ * catálogo entrou sem NCM, e a pesquisa fiscal veio semanas depois. Só toca no
+ * que está em branco — quem corrigir um código pelo painel não vê a correção
+ * ser desfeita no deploy seguinte, que é o que aconteceria com um UPDATE
+ * simples.
+ */
+async function preencherFiscal(itens) {
+  const comFiscal = itens.filter((i) => i.ncm && i.unitTrib)
+  if (!comFiscal.length) return
+
+  let n = 0
+  for (const i of comFiscal) {
+    const { rowCount } = await pool.query(
+      `UPDATE products SET ncm = $1, unit_trib = $2
+        WHERE sku = $3 AND (ncm = '' OR unit_trib = '')`,
+      [i.ncm, i.unitTrib, i.sku],
+    )
+    n += rowCount
+  }
+
+  if (n) console.log(`[fiscal] NCM e unidade preenchidos em ${n} produto(s).`)
+}
+
 async function main() {
   const desativarDemo = process.argv.includes('--demo')
   const itens = JSON.parse(readFileSync(DADOS, 'utf8'))
+
+  if (process.argv.includes('--fiscal')) {
+    await preencherFiscal(itens)
+    await pool.end()
+    return
+  }
 
   /* --se-novo: só importa se o catálogo ainda não estiver lá.
    *
